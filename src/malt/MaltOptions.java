@@ -1,6 +1,6 @@
 /**
  * MaltOptions.java 
- * Copyright (C) 2017 Daniel H. Huson
+ * Copyright (C) 2015 Daniel H. Huson
  *
  * (Some files contain contributions from other authors, who are then mentioned separately.)
  *
@@ -19,6 +19,8 @@
  */
 package malt;
 
+import java.io.File;
+
 import malt.data.IAlphabet;
 import megan.parsers.blast.BlastMode;
 
@@ -27,6 +29,10 @@ import megan.parsers.blast.BlastMode;
  * Daniel Huson, 8.2014
  */
 public class MaltOptions {
+	 // duplicate removal muesste hashing wenn sich read wiederholen wird keine berechnung durch gefuert sondern ergebnisse wieder eingetragen 
+    // geht nur mit merged reads was machen wir mit single reads  
+	 // option scoring matrix anzugeben 
+	//set minimum query complexity 
     private String commandLine;
 
     public enum MatchOutputFormat {
@@ -43,7 +49,7 @@ public class MaltOptions {
     public enum MemoryMode {load, page, map} // load data into memory, load data in pages on demand, use memory mapping
 
     private boolean saveUnalignedToRMA;
-
+    private float lcaCoveragePercent = 80.0f;
     private int maxAlignmentsPerQuery = 25;
     private int maxAlignmentsPerReference = 1;
 
@@ -66,7 +72,7 @@ public class MaltOptions {
     private boolean gzipUnalignedReads = true;
 
     private boolean useWeightedLCA = false;
-    private float lcaCoveragePercent = 80.0f;
+    private float weightedLCAPercent = 80.0f;
 
     private float topPercentLCA = 10;
     private float minSupportPercentLCA = 0.001f;
@@ -86,7 +92,97 @@ public class MaltOptions {
     private boolean useReplicateQueryCaching = false;
 
     private boolean pairedReads = false;
+    
+    private boolean removeDuplicates = false;
+    
+    private double minComplexity = 0.00;
+   
+    private boolean ancientScoringMatrix = false;
+    
+    private String userCustomDNAScoring = "";
+    /**
+     * getAncientScoringMAtrix()
+     * 
+     * 
+     * @return boolean
+     */
+    public float getLcaCoveragePercent() {
+        return lcaCoveragePercent;
+    }
 
+    public void setLcaCoveragePercent(float lcaCoveragePercent) {
+        this.lcaCoveragePercent = lcaCoveragePercent;
+    }
+    public boolean getAncientScoringMatrix(){
+    	return this.ancientScoringMatrix; 
+    }
+    /**
+     * setAncientScoringMAtrix(boolean b)
+     * 
+     * 
+     * @return void
+     */
+    public void setAncientScoringMatrix(boolean b){
+    	this.ancientScoringMatrix = b;
+    }
+    /**
+     * setMinimumQueryComplexity(double d)
+     * 
+     * 
+     * @return void
+     */
+    public void setMinimumQueryComplexity(double d){
+    	this.minComplexity = d;
+    }
+    /**
+     * getMinimimQueryCOmlexity
+     * 
+     * @return double
+     */
+    public double getMinimumQueryComplexity(){
+    	return this.minComplexity;
+    }
+    
+    /**
+     * setUserCustomDNAScoring(boolean f)
+     * 
+     * 
+     * @return void
+     */
+    public void setUserCustomDNAScoring(String s){
+    	if(s.length()>0){
+    		if(new File(s).canRead())
+    			this.userCustomDNAScoring =s;
+    		else
+    			System.err.println("Unable to read custom DNA scoring matrix...");
+    	}
+    }
+    /**
+     * provide User specified DNA Scoring matrix 
+     * 
+     * @return boolean 
+     */
+    public String getUserCustomDNAScoring(){
+    	return this.userCustomDNAScoring;
+    }
+    
+    /**
+     * remove Duplicates(boolean f)
+     * 
+     * 
+     * @return void
+     */
+    public void setRemoveDuplicates(boolean f){
+    	this.removeDuplicates =f;
+    }
+    /**
+     * remove Duplicates
+     * 
+     * @return boolean
+     */
+    public boolean getRemoveDuplicates(){
+    	return this.removeDuplicates;
+    }
     /**
      * get seed shift step
      *
@@ -311,12 +407,12 @@ public class MaltOptions {
         this.useWeightedLCA = useWeightedLCA;
     }
 
-    public float getLcaCoveragePercent() {
-        return lcaCoveragePercent;
+    public float getWeightedLCAPercent() {
+        return weightedLCAPercent;
     }
 
-    public void setLcaCoveragePercent(float lcaCoveragePercent) {
-        this.lcaCoveragePercent = lcaCoveragePercent;
+    public void setWeightedLCAPercent(float weightedLCAPercent) {
+        this.weightedLCAPercent = weightedLCAPercent;
     }
 
     public boolean isPairedReads() {

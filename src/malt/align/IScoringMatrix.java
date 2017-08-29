@@ -1,6 +1,6 @@
 /**
  * IScoringMatrix.java 
- * Copyright (C) 2017 Daniel H. Huson
+ * Copyright (C) 2015 Daniel H. Huson
  *
  * (Some files contain contributions from other authors, who are then mentioned separately.)
  *
@@ -18,6 +18,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package malt.align;
+
+import java.awt.Container;
+import java.util.HashMap;
 
 /**
  * interface for scoring matrix
@@ -39,4 +42,6 @@ public interface IScoringMatrix {
      * @return matrix
      */
     int[][] getMatrix();
+   // HashMap<String,Integer> getMatrix();
+    void setMatrix(int[][]matrix);
 }

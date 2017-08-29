@@ -370,4 +370,10 @@ public class ProteinScoringMatrix implements IScoringMatrix {
     public int[][] getMatrix() {
         return matrix;
     }
+
+	@Override
+	public void setMatrix(int[][] matrix) {
+		// TODO Auto-generated method stub
+		
+	}
 }

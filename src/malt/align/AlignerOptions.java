@@ -1,6 +1,6 @@
 /**
  * AlignerOptions.java 
- * Copyright (C) 2017 Daniel H. Huson
+ * Copyright (C) 2015 Daniel H. Huson
  *
  * (Some files contain contributions from other authors, who are then mentioned separately.)
  *
@@ -46,14 +46,39 @@ public class AlignerOptions {
     // two values for computing blast statistics:
     private double lambda = 0.625;
     private double lnK = -0.89159811928378356416921953633132;
-
+    private double percent = 0.3;
+    private int tails =5;
+    
     private IScoringMatrix scoringMatrix;
-
+    private IScoringMatrix dnaBorderMatrix;
     private long referenceDatabaseLength = 100000;
 
     private boolean samSoftClipping = false;
-
-
+    private boolean useBorderMatrix= false;
+    public void setTails(int t){
+    	this.tails = t;
+    }
+    public int getTails(){
+    	return this.tails;
+    }
+    public void setPercent(double d){
+    	this.percent = d;
+    }
+    public double getPercent(){
+    	return this.percent;
+    }
+    public void setUseBorderMatrix(boolean b){
+    	this.useBorderMatrix =b;
+    }
+    public boolean wantBorderMatrix(){
+    	return this.useBorderMatrix;
+    }
+    public void setDNABorderMatrix(IScoringMatrix matrix){
+    	this.dnaBorderMatrix = matrix;
+    }
+    public IScoringMatrix getDNABorderMatrix(){
+    	return this.dnaBorderMatrix;
+    }
     public AlignmentMode getAlignmentType() {
         return alignmentType;
     }

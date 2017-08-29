@@ -28,3 +28,4 @@ antbuild/*rename*
 antbuild/*shrink*
 antbuild/src/
 antbuild/classes/
+/bin/

@@ -1,6 +1,6 @@
 /**
  * BandedAligner.java 
- * Copyright (C) 2017 Daniel H. Huson
+ * Copyright (C) 2015 Daniel H. Huson
  *
  * (Some files contain contributions from other authors, who are then mentioned separately.)
  *
@@ -26,7 +26,7 @@ import malt.io.SAMHelper;
 import malt.util.ReusableByteBuffer;
 import malt.util.Utilities;
 import megan.parsers.blast.BlastMode;
-
+//TODO add online mode 
 /**
  * banded DNA aligner. Does both local and semiGlobal alignment
  * Daniel Huson, 8.2014
@@ -47,10 +47,12 @@ public class BandedAligner {
     private byte[] reference;
     private int referenceLength;
 
-    private final int[][] scoringMatrix;
+    private final int[][] scoringMatrix;//TODO problem 
+    private final int[][] borderMatrix;
     private final int gapOpenPenalty;
     private final int gapExtensionPenalty;
     private final int band;
+    private boolean useBorderMatrix = false;
 
     private int rawScore;
     private float bitScore = 0;
@@ -111,15 +113,18 @@ public class BandedAligner {
     private final int rows;
     private final int lastRowToFill;
     private final int middleRow;
-
+    private final int tails;
+    private int modifiedLength = 0;
+    private int modifiedIdentities = 0;
     /**
      * constructor
      *
      * @param alignerOptions
      */
     public BandedAligner(final AlignerOptions alignerOptions, final BlastMode mode) {
-        this.scoringMatrix = alignerOptions.getScoringMatrix().getMatrix();
-        this.isDNAAlignment = (mode == BlastMode.BlastN);
+        this.scoringMatrix = alignerOptions.getScoringMatrix().getMatrix();// TODO optional set second matrix for borders //noUDG, fullUDG,halfUDG maybe just make it user specific 
+        this.isDNAAlignment = (mode == BlastMode.BlastN);//TODO parameter pro file 
+        //TODO should parameters be changed per clade 
         this.doSemiGlobal = alignerOptions.getAlignmentType() == AlignerOptions.AlignmentMode.SemiGlobal;
 
         this.lambda = alignerOptions.getLambda();
@@ -145,6 +150,15 @@ public class BandedAligner {
         // todo: only use one traceback matrix
 
         samSoftClipping = alignerOptions.isSamSoftClipping();
+        
+        if(alignerOptions.wantBorderMatrix()){ // here we use BorderMatrix 
+        	this.borderMatrix = alignerOptions.getDNABorderMatrix().getMatrix();
+        	this.useBorderMatrix = alignerOptions.wantBorderMatrix();
+        	this.tails = alignerOptions.getTails();
+       }else{
+        	this.borderMatrix = null;
+        	this.tails = 0;
+        }
     }
 
     /**
@@ -463,7 +477,7 @@ public class BandedAligner {
     /**
      * Performs a banded semi-global alignment.
      */
-    private void computeSemiGlobalAlignment() {
+    private void computeSemiGlobalAlignment() { //TODO Use different Scoring matrix here 
         alignment = null; // will need to call alignmentByTraceBack to compute this
 
         refOffset = refPos - queryPos - band - 2; // need this to compute index in reference sequence
@@ -476,12 +490,20 @@ public class BandedAligner {
         //if (lastSeedCol > queryLength)
         //    return; // too long
 
-        // ------- compute score that comes from seed (without first and last member)
+        // ------- compute score that comes from seed (without first and last member) 
         rawScore = 0;
-        {
+        {//TODO Probably need to change it here 
             for (int col = firstSeedCol + 1; col < lastSeedCol; col++) {
                 final int refIndex = middleRow + col + refOffset;
+                if(!useBorderMatrix){
                 rawScore += scoringMatrix[query[col - 1]][reference[refIndex]];
+                }else{
+                	if(col <= tails||col >= lastSeedCol-tails){//TODO // use more lenient scoring system for first and last 5 positions col is 1 based probably 
+                		rawScore += borderMatrix[query[col - 1]][reference[refIndex]];
+                	}else{
+                		 rawScore += scoringMatrix[query[col - 1]][reference[refIndex]];
+                	}
+                }
             }
             if (rawScore <= 0) {
                 rawScore = 0;
@@ -538,9 +560,12 @@ public class BandedAligner {
                     {
                         int bestMScore = Integer.MIN_VALUE;
                         // match or mismatch
-                        {
-                            final int s = scoringMatrix[query[col - 1]][reference[refIndex]];
-
+                        {//TODO change scroing matrix here
+                        	final int s;
+                        		if((useBorderMatrix && col <= tails)||(useBorderMatrix && col >= firstSeedCol-tails))
+                        			s = borderMatrix[query[col - 1]][reference[refIndex]];
+                            	else
+                            		s = scoringMatrix[query[col - 1]][reference[refIndex]];
                             int score = matrixM[col - 1][row] + s;
                             if (score > bestMScore) {
                                 traceBackM[col][row] = M_FROM_M;
@@ -630,8 +655,12 @@ public class BandedAligner {
                     } else if (refIndex >= 0 && refIndex < referenceLength) { // do the actual alignment:
                         int bestMScore = Integer.MIN_VALUE;
                         // match or mismatch
-                        {
-                            final int s = scoringMatrix[query[col - 1]][reference[refIndex]]; // pos in query=col-1
+                        {//TODO change scroing matrix here 
+                        	final int s;
+                    		if((useBorderMatrix&&col<=tails )|| (useBorderMatrix && col>=queryLength-(tails-1)))// change matrix for first and last 5 positions
+                    			s = borderMatrix[query[col - 1]][reference[refIndex]];
+                        	else
+                        		s = scoringMatrix[query[col - 1]][reference[refIndex]];
 
                             int score = matrixM[col + 1][row] + s;
                             if (score > bestMScore) {
@@ -744,7 +773,7 @@ public class BandedAligner {
      *
      * @return alignment
      */
-    public void computeAlignmentByTraceBack() {
+    public void computeAlignmentByTraceBack() {//TODO change Percent identity here
         if (rawScore <= 0) {
             alignment = null;
             return;
@@ -770,7 +799,7 @@ public class BandedAligner {
             } else if (matrixIQuery[c][r] > matrixM[c][r])
                 traceBack = traceBackIQuery;
 
-            loop:
+            loop://TODO traceback?
             while (true) {
                 int refIndex = r + c + refOffset;
 
@@ -928,7 +957,7 @@ public class BandedAligner {
                     traceBack = traceBackIQuery;
             } else if (matrixIQuery[c][r] > matrixM[c][r])
                 traceBack = traceBackIQuery;
-
+            //Damage neutral an ersten und letzten 5 basen und zieht sie von der laenge ab
             loop:
             while (true) {
                 int refIndex = r + c + refOffset;
@@ -1073,12 +1102,62 @@ public class BandedAligner {
     }
 
     public int getIdentities() {
-        return identities;
+    	if(useBorderMatrix){
+    		if(modifiedIdentities == 0)
+    			getBorderMatrixPercentIdentity();
+    		return modifiedIdentities;
+    	}else{
+    		return identities;
+    	}
     }
-
+    private float getBorderMatrixPercentIdentity(){//TODO calculate PercentIdentityToIgnoreDamage    	
+    	if(alignment == null && alignmentLength == 0){
+    		 computeAlignmentByTraceBack();
+    	}
+    		int matches = 0;
+    		int ignore =  0;
+    		byte[] query = alignment[0];
+    		byte[]	reference = alignment[2];	
+    		for(int i = 0;i < query.length;i++){
+    			if(query[i]==reference[i]){
+    				matches++;
+    			}else{
+	    			if(getEndReference()>getStartReference() + 1){
+	    					if(i <= tails){
+		    					if(query[i]=='T' && reference[i]=='C')
+		    						ignore++;
+		    						matches++;
+		    				}
+		    				else if(i>= alignmentLength-tails){
+		    					if(query[i]=='A' && reference[i]=='G')
+		    						ignore++;	
+		    						matches++;
+			    				}
+	    			}else{
+	    				if(i <= tails){
+	    					if(query[i]=='A' && reference[i]=='G')
+	    						ignore++;
+	    						matches++;
+	    				}	
+	    				else if(i>= alignmentLength-tails){
+	    					if(query[i]=='T' && reference[i]=='C')
+	    						ignore++;
+	    						matches++;
+		    				}	
+	    			}
+    			}
+    		}
+    		this.modifiedLength = alignmentLength-ignore;
+    		this.modifiedIdentities = matches;
+//    		System.out.println("Modified"+ (float) (100 * matches)/ (float) alignmentLength);
+//    		System.out.println("Modified"+ (float) (100 * matches)/ (float) modifiedLength);
+    		return (float) (100 * matches)/ (float) alignmentLength;
+    }
     public float getPercentIdentity() {
-        if (alignment == null)
+    	//getBorderMatrix Alignment by calculating it from ALignment
+        if (alignment == null){
             computeAlignmentByTraceBack();
+        }
         return getAlignmentLength() == 0 ? 0 : (float) (100 * getIdentities()) / (float) getAlignmentLength();
     }
 
@@ -1098,8 +1177,12 @@ public class BandedAligner {
         return expected;
     }
 
-    public int getAlignmentLength() {
-        return alignmentLength;
+    public int getAlignmentLength() {//changed to use reduced alognemnt length if use borde rmatrix is activ
+//    	if(!useBorderMatrix){
+//    		return alignmentLength;
+//    	}else{
+    		return getModifiedLength();
+//    	}
     }
 
     public long getReferenceDatabaseLength() {
@@ -1222,6 +1305,7 @@ public class BandedAligner {
      * @return alignment text
      */
     public byte[] getAlignmentText(DataForInnerLoop data, int frameRank) {
+    	
         if (alignment == null)
             computeAlignmentByTraceBack();
 
@@ -1232,10 +1316,11 @@ public class BandedAligner {
         else
             alignmentBuffer.writeAsAscii(String.format(" Score = %.1f bits (%d), Expect = 0.0\n", getBitScore(), getRawScore()));
 
-        if (isDNAAlignment)
-            alignmentBuffer.writeAsAscii(String.format(" Identities = %d/%d (%.0f%%), Gaps = %d/%d (%.0f%%)\n", getIdentities(), getAlignmentLength(),
-                    (100.0 * (getIdentities()) / getAlignmentLength()), getGaps(), getAlignmentLength(), (100.0 * (getGaps()) / getAlignmentLength())));
-        else // protein alignment
+        if (isDNAAlignment){
+        	alignmentBuffer.writeAsAscii(String.format(" Identities = %d/%d (%.0f%%), Gaps = %d/%d (%.0f%%)\n", getIdentities(), getAlignmentLength(),
+                    ( getPercentIdentity()), getGaps(), getAlignmentLength(), (100.0 * (getGaps()) / getAlignmentLength()))); // put changed alingment into alignment block
+        
+        } else // protein alignment
         {
             int numberOfPositives = getAlignmentLength() - Basic.countOccurrences(alignment[1], ' ');
             alignmentBuffer.writeAsAscii(String.format(" Identities = %d/%d (%.0f%%), Positives = %d/%d (%.0f%%), Gaps = %d/%d (%.0f%%)\n",
@@ -1315,16 +1400,14 @@ public class BandedAligner {
             alignmentBuffer.write(queryTrack, 0, length);
             alignmentBuffer.write('\t');
         }
-        {
-            int length = Utilities.getFirstWordSkipLeadingGreaterSign(referenceHeader, queryTrack); // misuse query track
-            alignmentBuffer.write(queryTrack, 0, length);
-        }
+        int length = Utilities.getFirstWordSkipLeadingGreaterSign(referenceHeader, queryTrack);
+        alignmentBuffer.write(queryTrack, 0, length);
         alignmentBuffer.write('\t');
         if (getExpected() == 0)
-            alignmentBuffer.writeAsAscii(String.format("%.1f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t0.0\t%d", ((100.0 * getIdentities()) / getAlignmentLength()), getAlignmentLength(),
+            alignmentBuffer.writeAsAscii(String.format("%.1f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t0.0\t%d", (getPercentIdentity()), getAlignmentLength(),
                     getMismatches(), getGapOpens(), outputStartQuery, outputEndQuery, getStartReference() + 1, getEndReference(), Math.round(getBitScore())));
         else
-            alignmentBuffer.writeAsAscii(String.format("%.1f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%.1g\t%d", ((100.0 * getIdentities()) / getAlignmentLength()), getAlignmentLength(),
+            alignmentBuffer.writeAsAscii(String.format("%.1f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%.1g\t%d", getPercentIdentity(), getAlignmentLength(),
                     getMismatches(), getGapOpens(), outputStartQuery, outputEndQuery, getStartReference() + 1, getEndReference(), getExpected(), Math.round(getBitScore())));
 
         return alignmentBuffer.makeCopy();
@@ -1363,7 +1446,7 @@ public class BandedAligner {
         }
 
         return SAMHelper.createSAMLine(mode, queryHeader, querySequence, startQuery, blastXQueryStart, endQuery, queryLength, alignment[0], referenceHeader,
-                outputStartReference, outputEndReference, alignment[2], referenceLength, bitScore, rawScore, expected, 100 * identities / alignmentLength, frame, data.getQualityValues(), samSoftClipping).getBytes();
+                outputStartReference, outputEndReference, alignment[2], referenceLength, bitScore, rawScore, expected, getPercentIdentity(), frame, data.getQualityValues(), samSoftClipping).getBytes();
     }
 
     /**
@@ -1406,4 +1489,15 @@ public class BandedAligner {
         }
         return false;
     }
+    public boolean useBorderMatrix(){
+    	return this.useBorderMatrix;
+    }
+   
+    public int getModifiedLength(){
+    	if(modifiedLength==0){
+    		getBorderMatrixPercentIdentity();
+    	}
+    	return this.modifiedLength;
+    }
+
 }

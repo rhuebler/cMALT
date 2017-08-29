@@ -1,6 +1,6 @@
 /**
  * AlignmentEngine.java 
- * Copyright (C) 2017 Daniel H. Huson
+ * Copyright (C) 2015 Daniel H. Huson
  *
  * (Some files contain contributions from other authors, who are then mentioned separately.)
  *
@@ -36,7 +36,7 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
-
+import jloda.util.DNAComplexityMeasure;
 /**
  * the main alignment engine. This runs in its own thread. It grabs the next read from the read queue and writes
  * the output to the ranked output writer
@@ -61,7 +61,7 @@ public class AlignmentEngine {
     private final FileWriterRanked alignedReadsWriter;
     private final FileWriterRanked unalignedReadsWriter;
     private final RMA6Writer rmaWriter;
-
+    //TODO whateverhappens happens in the RMA6 writer.processMatches?
     // parameters
     private final double minRawScore;
     private final double minBitScore;
@@ -164,7 +164,9 @@ public class AlignmentEngine {
 
         seedArrays = resizeAndConstructEntries(new SeedMatchArray[0], 1000, maltOptions.getMaxSeedsPerReference());
     }
-
+    public double getComplexity(String sequence){
+		return DNAComplexityMeasure.getMinimumDNAComplexityWoottenFederhen(sequence);
+	}
     /**
      * The main outer loop. Grabs the next input read and determines all possible seed matches. Then calls the inner loop
      */
@@ -185,32 +187,35 @@ public class AlignmentEngine {
 
             // iterate over all available queries, this method is thread-safe
             final FastARecord query = FastAReader.createFastARecord(1024, isWantQualityValues());
-            while (fastAReader.readAsFastA(query)) {
-                if (querySequence2MatchesCache != null && querySequence2MatchesCache.contains(query.getSequence(), query.getSequenceLength())) {
-                    runInnerLoop(query, 0, null); // query is cached, no need to compute frames etc
-                } else {
-                    // determine all frames to use:
-                    dataForInnerLoop.computeFrames(query.getSequence(), query.getQualityValues(), query.getSequenceLength());
+            while (fastAReader.readAsFastA(query)) { //TODO remove Duplicates by tempering here 
+            	 if(getComplexity(query.getSequenceString()) >= maltOptions.getMinimumQueryComplexity()){
+            		 if (querySequence2MatchesCache != null && querySequence2MatchesCache.contains(query.getSequence(), query.getSequenceLength())) {
+            			 if(!maltOptions.getRemoveDuplicates())
+            				 runInnerLoop(query, 0, null); // query is cached, no need to compute frames etc
+            			 } else {
+            			// determine all frames to use:
+            				 dataForInnerLoop.computeFrames(query.getSequence(), query.getQualityValues(), query.getSequenceLength());
 
-                    // find seed matches for all frames and using all seed tables:
-                    int totalSize = 0;
-                    for (int s = 0; s < dataForInnerLoop.numberOfFrames; s++) {  // for each frame of query
-                        for (int t = 0; t < tables.length; t++) {  // consider each seed table
-                            final ReferencesHashTableAccess table = tables[t];
-                            final SeedShape seedShape = table.getSeedShape();
-                            int top = dataForInnerLoop.frameSequenceLength[s] - seedShape.getLength() + 1;
-                            for (int qOffset = 0; qOffset < dataForInnerLoop.frameSequenceLength[s]; qOffset += shift) {  // consider all offsets
-                                if (qOffset < top) {
-                                    final byte[] seed = seedShape.getSeed(dataForInnerLoop.frameSequence[s], qOffset, seedBytes[s][t]);
-                                    totalSize += table.lookup(seed, dataForInnerLoop.frameXTableXSeed2Reference[s][t][qOffset]);
-                                } else
-                                    dataForInnerLoop.frameXTableXSeed2Reference[s][t][qOffset].setEmpty();
-                            }
-                        }
-                    }
-                    // run the inner loop
-                    runInnerLoop(query, totalSize, dataForInnerLoop);
-                }
+            			// find seed matches for all frames and using all seed tables:
+            			int totalSize = 0;
+            			for (int s = 0; s < dataForInnerLoop.numberOfFrames; s++) {  // for each frame of query
+            				for (int t = 0; t < tables.length; t++) {  // consider each seed table
+            					final ReferencesHashTableAccess table = tables[t];
+                            	final SeedShape seedShape = table.getSeedShape();
+                            	int top = dataForInnerLoop.frameSequenceLength[s] - seedShape.getLength() + 1;
+                            	for (int qOffset = 0; qOffset < dataForInnerLoop.frameSequenceLength[s]; qOffset += shift) {  // consider all offsets
+                            		if (qOffset < top) {
+                            			final byte[] seed = seedShape.getSeed(dataForInnerLoop.frameSequence[s], qOffset, seedBytes[s][t]);
+                            			totalSize += table.lookup(seed, dataForInnerLoop.frameXTableXSeed2Reference[s][t][qOffset]);
+                            		} else
+                            			dataForInnerLoop.frameXTableXSeed2Reference[s][t][qOffset].setEmpty();
+                            	}
+            				}
+            			}
+            			// run the inner loop
+            			runInnerLoop(query, totalSize, dataForInnerLoop);
+            		}
+            	}//if comlexity 
             }
         } catch (Exception ex) {
             Basic.caught(ex);
@@ -228,17 +233,14 @@ public class AlignmentEngine {
      */
     public void runInnerLoop(final FastARecord query, final int totalSize, final DataForInnerLoop dataForInnerLoop) throws IOException {
         countSequencesProcessed++;
-
-        // if cache active and query found, use the cached matches:
+        
         ReadMatch[] matchesArray = (querySequence2MatchesCache != null ? querySequence2MatchesCache.get(query.getSequence(), query.getSequenceLength()) : null);
-        int numberOfMatches = (matchesArray != null ? matchesArray.length : 0);
-
+        int numberOfMatches = (matchesArray != null ? matchesArray.length : 0); 
         if (matchesArray != null) // found is cache, rescan counts
-        {
-            if (numberOfMatches > 0) {
-                countAlignments += numberOfMatches;
-                countSequencesWithAlignments++;
-            }
+        {  if (numberOfMatches > 0) {
+        	countAlignments += numberOfMatches;
+        	countSequencesWithAlignments++;
+        	}
         } else // not found in cache, need to compute...
         {
             if (totalSize > 0) { // have some seeds to look at
@@ -396,13 +398,18 @@ public class AlignmentEngine {
                                                 {
                                                     if (text == null && rma3Text == null)  // haven't computed alignment, so number of matches not yet computed
                                                         aligner.computeAlignmentByTraceBack(); // compute number of matches
-                                                    if (aligner.getIdentities() < percentIdentity * aligner.getAlignmentLength()) {  // too few identities
-                                                        if (incrementedNumberOfReadMatchesForRefIndex)
-                                                            numberOfReadMatchesForRefIndex--; // undo increment, won't be saving this match
-                                                        continue;
-                                                    }
+		                                                if (aligner.getIdentities() < percentIdentity * aligner.getAlignmentLength()) {
+		                                                	System.out.print(aligner.getAlignmentSimpleText());
+		                                                	// too few identit
+		                                                    if (incrementedNumberOfReadMatchesForRefIndex)
+		                                                        numberOfReadMatchesForRefIndex--; // undo increment, won't be saving this match
+		                                                    continue;
+		                                                }
                                                 }
                                                 readMatch.set(aligner.getBitScore(), refIndex, text, rma3Text, aligner.getStartReference(), aligner.getEndReference());
+                                                readMatch.setPercentIdentity((int) aligner.getPercentIdentity());
+                                                readMatch.setAncientPercentIdentity(aligner.getPercentIdentity());
+                                                System.out.println("AncientPi aligner "+ readMatch.getAncientPercentIdentity());
                                             }
                                             previous = seedMatch;
                                         }
@@ -431,6 +438,7 @@ public class AlignmentEngine {
             }
             // if use caching, save, even if no matches found!
             if (querySequence2MatchesCache != null) {
+            	System.out.println("cache "+ matchesArray.length);
                 querySequence2MatchesCache.put(query.getSequence(), query.getSequenceLength(), matchesArray, numberOfMatches); // ok to pass matchesArray==null when numberOfMatches==0
             }
         }
@@ -448,6 +456,10 @@ public class AlignmentEngine {
                             strings[3 * i + 1] = referencesDB.getHeader(readMatch.getReferenceId());
                             strings[3 * i + 2] = String.format("\tLength=%d\n", referencesDB.getSequenceLength(readMatch.getReferenceId())).getBytes();
                             strings[3 * i + 3] = readMatch.getText();
+//                            System.out.println("Text: ");
+//                            for(byte[]bytes:strings)
+//                        	   for(byte b : bytes)
+//                        		   System.out.print((char) b);
                         }
                         matchesWriter.writeByRank(threadNumber, query.getId(), strings);
                         break;
@@ -461,13 +473,20 @@ public class AlignmentEngine {
                             strings[2 * i] = queryNamePlusTab;
                             strings[2 * i + 1] = readMatch.getText();
                         }
+
                         matchesWriter.writeByRank(threadNumber, query.getId(), strings);
                         break;
                     }
                 }
             }
             if (rmaWriter != null) {
-                rmaWriter.processMatches(query.getHeaderString(), query.getSequenceString(), matchesArray, numberOfMatches);
+            //	System.out.println("written here "+numberOfMatches);//TODO here we write matches
+            	for(ReadMatch match:matchesArray){
+            		System.out.println("AcnientPI: " + match.getAncientPercentIdentity());
+            		for(byte b : match.getRMA3Text())
+            			System.out.print((char)b);
+            	}
+                rmaWriter.processMatches(query.getHeaderString(), query.getSequenceString(), matchesArray, numberOfMatches, aligner.useBorderMatrix());
             }
 
             if (alignedReferenceIds != null) {
@@ -500,7 +519,7 @@ public class AlignmentEngine {
                 }
             }
             if (rmaWriter != null && maltOptions.isSaveUnalignedToRMA()) {
-                rmaWriter.processMatches(query.getHeaderString(), query.getSequenceString(), matchesArray, 0);
+                rmaWriter.processMatches(query.getHeaderString(), query.getSequenceString(), matchesArray, 0,aligner.useBorderMatrix());
             }
             if (organismsOutStream != null) {
                 organismsProfile.addNoHitsRead();
@@ -641,7 +660,7 @@ public class AlignmentEngine {
         public void clear() {
             size = 0;
         }
-
+       
         public void sort() {
             Arrays.sort(matches, 0, size, SeedMatch.getComparator());
         }

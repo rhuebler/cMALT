@@ -1,6 +1,6 @@
 /**
  * DNAScoringMatrix.java 
- * Copyright (C) 2017 Daniel H. Huson
+ * Copyright (C) 2015 Daniel H. Huson
  *
  * (Some files contain contributions from other authors, who are then mentioned separately.)
  *
@@ -49,4 +49,10 @@ public class DNAScoringMatrix implements IScoringMatrix {
     public int[][] getMatrix() {
         return matrix;
     }
+
+	@Override
+	public void setMatrix(int[][] matrix) {
+		// TODO Auto-generated method stub
+		
+	}
 }

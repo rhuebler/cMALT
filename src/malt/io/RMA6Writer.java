@@ -1,3 +1,5 @@
+
+
 /**
  * RMA6Writer.java
  * Copyright (C) 2017 Daniel H. Huson
@@ -99,7 +101,7 @@ public class RMA6Writer {
      * @param numberOfMatches
      * @throws IOException
      */
-    public synchronized void processMatches(String queryHeader, String querySequence, ReadMatch[] matchesArray, int numberOfMatches) throws IOException {
+    public synchronized void processMatches(String queryHeader, String querySequence, ReadMatch[] matchesArray, int numberOfMatches, boolean ancientModeOn) throws IOException {
         // setup query text:
         byte[] queryName = Basic.swallowLeadingGreaterSign(Basic.getFirstWord(queryHeader)).getBytes();
         byte[] queryHeaderText = queryHeader.getBytes();
@@ -137,7 +139,15 @@ public class RMA6Writer {
 
             matches[m].setBitScore(match.getBitScore());
             matches[m].setExpected(match.getExpected());
-            matches[m].setPercentIdentity(match.getPercentIdentity());
+            System.out.println("Got here");
+            if(ancientModeOn){
+            	System.out.println("AncientPercent Identity");
+            	System.out.println("Stuff"+matchesArray[m].getAncientPercentIdentity());
+            	matches[m].setPercentIdentity(match.getAncientPercentIdentity());
+            }else{
+            	System.out.println("Normal Percent Identity");
+            	matches[m].setPercentIdentity(match.getPercentIdentity());
+            }
             for (int i = 0; i < cNames.length; i++) {
                 final int id = MappingManager.getMapping(i).get(match.getReferenceId());
                 match2classification2id[m][i] = id;
@@ -192,7 +202,7 @@ public class RMA6Writer {
             final Document doc = new Document();
             doc.setTopPercent(maltOptions.getTopPercentLCA());
             doc.setLcaAlgorithm(maltOptions.isUseWeightedLCA() ? Document.LCAAlgorithm.weighted : Document.LCAAlgorithm.naive);
-            doc.setLcaCoveragePercent(maltOptions.getLcaCoveragePercent());
+            //TODO LCA parameter not used doc.setLcaCoveragePercent(maltOptions.getLcaCoveragePercent());
             doc.setMinSupportPercent(maltOptions.getMinSupportPercentLCA());
             doc.setMinSupport(maltOptions.getMinSupportLCA());
             doc.setMaxExpected((float) maltOptions.getMaxExpected());
@@ -217,3 +227,5 @@ public class RMA6Writer {
         }
     }
 }
+
+  

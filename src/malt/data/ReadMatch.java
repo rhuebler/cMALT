@@ -1,6 +1,6 @@
 /**
  * ReadMatch.java 
- * Copyright (C) 2017 Daniel H. Huson
+ * Copyright (C) 2015 Daniel H. Huson
  *
  * (Some files contain contributions from other authors, who are then mentioned separately.)
  *
@@ -38,6 +38,7 @@ class ReadMatch {
     private float bitScore;
     private float expected;
     private int percentIdentity;
+    private float ancientPercentIdentity;
     private int referenceId;
     private byte[] text;      // match text
     private byte[] rma3Text;
@@ -96,7 +97,15 @@ class ReadMatch {
         this.startRef = startRef;
         this.endRef = endRef;
     }
-
+    public void setAncientPercentIdentity(float identity){
+    	this.ancientPercentIdentity = identity;
+    }
+    public float getAncientPercentIdentity(){
+    	return this.ancientPercentIdentity;
+    }
+    public void setPercentIdentity(int percentIndentity){//TODO set this 
+    	this.percentIdentity = percentIndentity;
+    }
     public float getBitScore() {
         return bitScore;
     }
