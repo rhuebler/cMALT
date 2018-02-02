@@ -139,13 +139,11 @@ public class RMA6Writer {
 
             matches[m].setBitScore(match.getBitScore());
             matches[m].setExpected(match.getExpected());
-            System.out.println("Got here");
             if(ancientModeOn){
-            	System.out.println("AncientPercent Identity");
-            	System.out.println("Stuff"+matchesArray[m].getAncientPercentIdentity());
+            	//System.out.println("Ancient: " + (int) matchesArray[m].getAncientPercentIdentity());
+//            	System.out.println("MOdernt: " + match.getPercentIdentity());
             	matches[m].setPercentIdentity(match.getAncientPercentIdentity());
             }else{
-            	System.out.println("Normal Percent Identity");
             	matches[m].setPercentIdentity(match.getPercentIdentity());
             }
             for (int i = 0; i < cNames.length; i++) {

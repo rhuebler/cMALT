@@ -152,7 +152,7 @@ public class AlignmentEngine {
         matchesQueue = new FixedSizePriorityQueue<>(maltOptions.getMaxAlignmentsPerQuery(), ReadMatch.createComparator());
         recycledMatchesArray = new ReadMatch[maltOptions.getMaxAlignmentsPerQuery()];
         refIndex2ASeedMatches = new HashMap<>(10000, 0.9f);
-        readMatchesForRefIndex = new ReadMatch[maltOptions.getMaxAlignmentsPerReference()];
+        readMatchesForRefIndex = new ReadMatch[maltOptions.getMaxAlignmentsPerReference()];//Intialize empty array for read
         for (int i = 0; i < readMatchesForRefIndex.length; i++)
             readMatchesForRefIndex[i] = new ReadMatch();
 
@@ -398,18 +398,27 @@ public class AlignmentEngine {
                                                 {
                                                     if (text == null && rma3Text == null)  // haven't computed alignment, so number of matches not yet computed
                                                         aligner.computeAlignmentByTraceBack(); // compute number of matches
-		                                                if (aligner.getIdentities() < percentIdentity * aligner.getAlignmentLength()) {
-		                                                	System.out.print(aligner.getAlignmentSimpleText());
-		                                                	// too few identit
-		                                                    if (incrementedNumberOfReadMatchesForRefIndex)
-		                                                        numberOfReadMatchesForRefIndex--; // undo increment, won't be saving this match
-		                                                    continue;
+		                                                if(aligner.ignoreDamage()){
+		                                                	if (aligner.getIdentities() < percentIdentity * aligner.getModifiedLength()) {
+			                                                	// too few identit
+			                                                    if (incrementedNumberOfReadMatchesForRefIndex)
+			                                                        numberOfReadMatchesForRefIndex--; // undo increment, won't be saving this match
+			                                                    continue;
+		                                                	}
 		                                                }
+                                                    	else {
+                                                    		if (aligner.getIdentities() < percentIdentity * aligner.getAlignmentLength()) {// too few identit
+			                                                    if (incrementedNumberOfReadMatchesForRefIndex)
+			                                                        numberOfReadMatchesForRefIndex--; // undo increment, won't be saving this match
+			                                                    continue;
+		                                                }
+                                                    }
                                                 }
                                                 readMatch.set(aligner.getBitScore(), refIndex, text, rma3Text, aligner.getStartReference(), aligner.getEndReference());
-                                                readMatch.setPercentIdentity((int) aligner.getPercentIdentity());
+                                                //set PI and aPI here
+                                               // readMatch.setPercentIdentity((int) aligner.getPercentIdentity());
                                                 readMatch.setAncientPercentIdentity(aligner.getPercentIdentity());
-                                                System.out.println("AncientPi aligner "+ readMatch.getAncientPercentIdentity());
+                                               // System.out.println("API: "+(int) readMatch.getAncientPercentIdentity());
                                             }
                                             previous = seedMatch;
                                         }
@@ -417,8 +426,11 @@ public class AlignmentEngine {
                                 }
                             }
                         }
-                        for (int z = 0; z < numberOfReadMatchesForRefIndex; z++) {
-                            matchesQueue.add(readMatchesForRefIndex[z].getCopy());
+                        for (int z = 0; z < numberOfReadMatchesForRefIndex; z++) {//TODO maybe here?
+                        	if(aligner.ignoreDamage())
+                        		matchesQueue.add(readMatchesForRefIndex[z].getAncCopy());
+                        	else
+                        		matchesQueue.add(readMatchesForRefIndex[z].getCopy());
                         }
                     }
                 } finally {
@@ -438,7 +450,6 @@ public class AlignmentEngine {
             }
             // if use caching, save, even if no matches found!
             if (querySequence2MatchesCache != null) {
-            	System.out.println("cache "+ matchesArray.length);
                 querySequence2MatchesCache.put(query.getSequence(), query.getSequenceLength(), matchesArray, numberOfMatches); // ok to pass matchesArray==null when numberOfMatches==0
             }
         }
@@ -480,13 +491,8 @@ public class AlignmentEngine {
                 }
             }
             if (rmaWriter != null) {
-            //	System.out.println("written here "+numberOfMatches);//TODO here we write matches
-            	for(ReadMatch match:matchesArray){
-            		System.out.println("AcnientPI: " + match.getAncientPercentIdentity());
-            		for(byte b : match.getRMA3Text())
-            			System.out.print((char)b);
-            	}
-                rmaWriter.processMatches(query.getHeaderString(), query.getSequenceString(), matchesArray, numberOfMatches, aligner.useBorderMatrix());
+//            	System.out.println("written here "+numberOfMatches);//TODO here we write malt
+                rmaWriter.processMatches(query.getHeaderString(), query.getSequenceString(), matchesArray, numberOfMatches, aligner.ignoreDamage());
             }
 
             if (alignedReferenceIds != null) {
@@ -519,7 +525,7 @@ public class AlignmentEngine {
                 }
             }
             if (rmaWriter != null && maltOptions.isSaveUnalignedToRMA()) {
-                rmaWriter.processMatches(query.getHeaderString(), query.getSequenceString(), matchesArray, 0,aligner.useBorderMatrix());
+                rmaWriter.processMatches(query.getHeaderString(), query.getSequenceString(), matchesArray, 0,aligner.ignoreDamage());
             }
             if (organismsOutStream != null) {
                 organismsProfile.addNoHitsRead();

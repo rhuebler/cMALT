@@ -1075,6 +1075,38 @@ public class BandedAligner {
 
         alignmentLength = length;
         alignment = new byte[][]{copy(queryTrack, length), copy(midTrack, length), copy(referenceTrack, length)};
+        
+		int ignore =  0;
+		byte[] query = alignment[0];
+		byte[]	reference = alignment[2];	
+		for(int i = 0;i < query.length;i++){
+			if(query[i]!=reference[i]){
+    			if(getEndReference()>getStartReference() + 1){
+    					if(i <= tails){
+	    					if(query[i]=='T' && reference[i]=='C'){
+	    						ignore++;
+	    					}	
+	    				}
+	    				else if(i>= alignmentLength-tails){
+	    					if(query[i]=='A' && reference[i]=='G'){
+	    						ignore++;	
+	    					}	
+	    				}
+    			}else{
+    				if(i <= tails){
+    					if(query[i]=='A' && reference[i]=='G'){
+    						ignore++;
+    					}
+    				}	
+    				else if(i>= alignmentLength-tails){
+    					if(query[i]=='T' && reference[i]=='C'){
+    						ignore++;
+    					}
+	    			}	
+    			}
+			}
+		}	
+		modifiedLength = alignmentLength-ignore;
     }
 
     public int getStartQuery() {
@@ -1102,63 +1134,80 @@ public class BandedAligner {
     }
 
     public int getIdentities() {
-    	if(useBorderMatrix){
-    		if(modifiedIdentities == 0)
-    			getBorderMatrixPercentIdentity();
-    		return modifiedIdentities;
-    	}else{
     		return identities;
-    	}
     }
     private float getBorderMatrixPercentIdentity(){//TODO calculate PercentIdentityToIgnoreDamage    	
     	if(alignment == null && alignmentLength == 0){
     		 computeAlignmentByTraceBack();
     	}
+//    		String sequence = "";
+//    		String al = "";
+//    		String ref = "";
     		int matches = 0;
     		int ignore =  0;
     		byte[] query = alignment[0];
     		byte[]	reference = alignment[2];	
     		for(int i = 0;i < query.length;i++){
+//    			sequence+=(char)query[i];
+//    			ref+=(char) reference[i];
+//    			al+=(char) alignment[1][i];
+    			
     			if(query[i]==reference[i]){
     				matches++;
     			}else{
 	    			if(getEndReference()>getStartReference() + 1){
 	    					if(i <= tails){
-		    					if(query[i]=='T' && reference[i]=='C')
+		    					if(query[i]=='T' && reference[i]=='C'){
 		    						ignore++;
 		    						matches++;
+		    					}	
 		    				}
 		    				else if(i>= alignmentLength-tails){
-		    					if(query[i]=='A' && reference[i]=='G')
+		    					if(query[i]=='A' && reference[i]=='G'){
 		    						ignore++;	
 		    						matches++;
-			    				}
+		    					}	
+		    				}
 	    			}else{
 	    				if(i <= tails){
-	    					if(query[i]=='A' && reference[i]=='G')
+	    					if(query[i]=='A' && reference[i]=='G'){
 	    						ignore++;
 	    						matches++;
+	    					}
 	    				}	
 	    				else if(i>= alignmentLength-tails){
-	    					if(query[i]=='T' && reference[i]=='C')
+	    					if(query[i]=='T' && reference[i]=='C'){
 	    						ignore++;
 	    						matches++;
+	    					}
 		    				}	
 	    			}
     			}
     		}
-    		this.modifiedLength = alignmentLength-ignore;
-    		this.modifiedIdentities = matches;
-//    		System.out.println("Modified"+ (float) (100 * matches)/ (float) alignmentLength);
-//    		System.out.println("Modified"+ (float) (100 * matches)/ (float) modifiedLength);
-    		return (float) (100 * matches)/ (float) alignmentLength;
+    		
+    		modifiedLength = alignmentLength-ignore;
+//    		if(modifiedLength>getIdentities())
+//    			modifiedLength=getIdentities();
+    		//modifiedIdentities = matches;
+//    		System.out.println();
+//    		System.out.println(sequence);
+//    		System.out.println(al);
+//    		System.out.println(ref);
+//    		
+//    		System.out.println("Unmodified"+ (float) (100 * getIdentities())/ (float) alignmentLength);
+//    		System.out.println("Modified"+ (float) (100 * getIdentities())/ (float) modifiedLength);
+    		return (float) (100 * getIdentities())/ (float) modifiedLength;
     }
     public float getPercentIdentity() {
     	//getBorderMatrix Alignment by calculating it from ALignment
         if (alignment == null){
             computeAlignmentByTraceBack();
         }
-        return getAlignmentLength() == 0 ? 0 : (float) (100 * getIdentities()) / (float) getAlignmentLength();
+        if(useBorderMatrix){
+        	return getModifiedLength() == 0 ? 0 : (float) (100 * getIdentities()) / (float) getModifiedLength();
+        }else{
+        	return getAlignmentLength() == 0 ? 0 : (float) (100 * getIdentities()) / (float) getAlignmentLength();
+        	}
     }
 
     public int getMismatches() {
@@ -1178,11 +1227,7 @@ public class BandedAligner {
     }
 
     public int getAlignmentLength() {//changed to use reduced alognemnt length if use borde rmatrix is activ
-//    	if(!useBorderMatrix){
-//    		return alignmentLength;
-//    	}else{
-    		return getModifiedLength();
-//    	}
+    		return alignmentLength;
     }
 
     public long getReferenceDatabaseLength() {
@@ -1444,9 +1489,31 @@ public class BandedAligner {
         if (mode == BlastMode.BlastX) {
             blastXQueryStart = data.getStartQueryForOutput(frameRank, startQuery);
         }
-
+//        if(getPercentIdentity()>100||getPercentIdentity()==0){
+//        	String sequence="";
+//        	String ref ="";
+//        	String al="";
+//        	byte[] query = alignment[0];
+//        	byte[] alLine = alignment[1];
+//    		byte[]	reference = alignment[2];	
+//    		for(int i = 0;i < query.length;i++){
+//    			sequence+=(char)query[i];
+//    			ref+=(char) reference[i];
+//    			al+=(char) alLine[i];
+//    			}
+//    	System.out.println(sequence);
+//    	System.out.println(al);
+//    	System.out.println(ref);
+//        System.out.println(	"Alignment Lenght: " + getAlignmentLength()+"\t"+
+//        					"Num Ident: " + getIdentities()+"\t"+
+//        					"Percent Identity: " + getPercentIdentity()+
+//        					"Start: " + getStartReference()+"\t"+
+//        					"End: " + getEndReference()
+//        		);
+//        }
         return SAMHelper.createSAMLine(mode, queryHeader, querySequence, startQuery, blastXQueryStart, endQuery, queryLength, alignment[0], referenceHeader,
                 outputStartReference, outputEndReference, alignment[2], referenceLength, bitScore, rawScore, expected, getPercentIdentity(), frame, data.getQualityValues(), samSoftClipping).getBytes();
+   
     }
 
     /**
@@ -1489,15 +1556,11 @@ public class BandedAligner {
         }
         return false;
     }
-    public boolean useBorderMatrix(){
-    	return this.useBorderMatrix;
+    public boolean ignoreDamage(){
+    	return useBorderMatrix;
     }
-   
-    public int getModifiedLength(){
-    	if(modifiedLength==0){
-    		getBorderMatrixPercentIdentity();
-    	}
-    	return this.modifiedLength;
-    }
+   public int getModifiedLength(){
+	   return modifiedLength;
+   }
 
 }

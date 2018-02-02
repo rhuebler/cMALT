@@ -52,7 +52,9 @@ class ReadMatch {
     public ReadMatch() {
 
     }
-
+    public ReadMatch getAncCopy() {
+        return new ReadMatch(bitScore, expected, percentIdentity, referenceId, text, rma3Text, startRef, endRef,ancientPercentIdentity);
+    }
     /**
      * returns a copy
      *
@@ -61,7 +63,26 @@ class ReadMatch {
     public ReadMatch getCopy() {
         return new ReadMatch(bitScore, expected, percentIdentity, referenceId, text, rma3Text, startRef, endRef);
     }
-
+    
+    /**
+     * constructor
+     *
+     * @param bitScore
+     * @param referenceId
+     * @param text
+     */
+    public ReadMatch(float bitScore, float expected, int percentIdentity, int referenceId, byte[] text, byte[] rma3Text, int startRef, int endRef, float ancientPerc) {
+        this.bitScore = bitScore;
+        this.expected = expected;
+        this.percentIdentity = percentIdentity;
+        this.referenceId = referenceId;
+        this.entryNumber = ++numberOfEntries;
+        this.text = text;
+        this.rma3Text = rma3Text;
+        this.startRef = startRef;
+        this.endRef = endRef;
+        this.ancientPercentIdentity = ancientPerc;
+    }
     /**
      * constructor
      *
@@ -101,7 +122,7 @@ class ReadMatch {
     	this.ancientPercentIdentity = identity;
     }
     public float getAncientPercentIdentity(){
-    	return this.ancientPercentIdentity;
+    	return ancientPercentIdentity;
     }
     public void setPercentIdentity(int percentIndentity){//TODO set this 
     	this.percentIdentity = percentIndentity;
