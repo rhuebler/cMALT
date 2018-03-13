@@ -61,7 +61,6 @@ public class AlignmentEngine {
     private final FileWriterRanked alignedReadsWriter;
     private final FileWriterRanked unalignedReadsWriter;
     private final RMA6Writer rmaWriter;
-    //TODO whateverhappens happens in the RMA6 writer.processMatches?
     // parameters
     private final double minRawScore;
     private final double minBitScore;
@@ -415,10 +414,7 @@ public class AlignmentEngine {
                                                     }
                                                 }
                                                 readMatch.set(aligner.getBitScore(), refIndex, text, rma3Text, aligner.getStartReference(), aligner.getEndReference());
-                                                //set PI and aPI here
-                                               // readMatch.setPercentIdentity((int) aligner.getPercentIdentity());
                                                 readMatch.setAncientPercentIdentity(aligner.getPercentIdentity());
-                                               // System.out.println("API: "+(int) readMatch.getAncientPercentIdentity());
                                             }
                                             previous = seedMatch;
                                         }
@@ -467,10 +463,6 @@ public class AlignmentEngine {
                             strings[3 * i + 1] = referencesDB.getHeader(readMatch.getReferenceId());
                             strings[3 * i + 2] = String.format("\tLength=%d\n", referencesDB.getSequenceLength(readMatch.getReferenceId())).getBytes();
                             strings[3 * i + 3] = readMatch.getText();
-//                            System.out.println("Text: ");
-//                            for(byte[]bytes:strings)
-//                        	   for(byte b : bytes)
-//                        		   System.out.print((char) b);
                         }
                         matchesWriter.writeByRank(threadNumber, query.getId(), strings);
                         break;
@@ -491,7 +483,6 @@ public class AlignmentEngine {
                 }
             }
             if (rmaWriter != null) {
-//            	System.out.println("written here "+numberOfMatches);//TODO here we write malt
                 rmaWriter.processMatches(query.getHeaderString(), query.getSequenceString(), matchesArray, numberOfMatches, aligner.ignoreDamage());
             }
 
