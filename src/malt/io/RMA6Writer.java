@@ -104,7 +104,7 @@ public class RMA6Writer {
      * @param numberOfMatches
      * @throws IOException
      */
-    public synchronized void processMatches(String queryHeader, String querySequence, ReadMatch[] matchesArray, int numberOfMatches) throws IOException {
+    public synchronized void processMatches(String queryHeader, String querySequence, ReadMatch[] matchesArray, int numberOfMatches, boolean ancientModeOn) throws IOException {
         // setup query text:
         byte[] queryName = Basic.swallowLeadingGreaterSign(Basic.getFirstWord(queryHeader)).getBytes();
         byte[] queryHeaderText = queryHeader.getBytes();
@@ -147,7 +147,13 @@ public class RMA6Writer {
 
             matches[m].setBitScore(match.getBitScore());
             matches[m].setExpected(match.getExpected());
-            matches[m].setPercentIdentity(match.getPercentIdentity());
+            if(ancientModeOn){
+            	//System.out.println("Ancient: " + (int) matchesArray[m].getAncientPercentIdentity());
+//            	System.out.println("MOdernt: " + match.getPercentIdentity());
+            	matches[m].setPercentIdentity(match.getAncientPercentIdentity());
+            }else{
+            	matches[m].setPercentIdentity(match.getPercentIdentity());
+            }
 
             final String refHeader = (parseHeaders ? getWordAsString(match.getRMA6Text(), 2) : null);
 
