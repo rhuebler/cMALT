@@ -100,6 +100,9 @@ public class MaltOptions {
     private boolean ancientScoringMatrix = false;
     
     private String userCustomDNAScoring = "";
+    private String contaminantsFile = "";
+
+    private boolean parseHeaders;
     /**
      * getAncientScoringMAtrix()
      * 
@@ -459,5 +462,20 @@ public class MaltOptions {
     public String getCommandLine() {
         return commandLine;
     }
+    public String getContaminantsFile() {
+        return contaminantsFile;
+    }
 
+    public void setContaminantsFile(String contaminantsFile) {
+        this.contaminantsFile = contaminantsFile;
+    }
+
+
+    public boolean isParseHeaders() {
+        return parseHeaders;
+    }
+
+    public void setParseHeaders(boolean parseHeaders) {
+        this.parseHeaders = parseHeaders;
+    }
 }

@@ -22,7 +22,6 @@ package malt;
 import jloda.util.Basic;
 import malt.align.AlignerOptions;
 import malt.align.BandedAligner;
-import malt.analysis.OrganismsProfile;
 import malt.data.*;
 import malt.io.*;
 import malt.mapping.MappingManager;
@@ -74,7 +73,6 @@ public class AlignmentEngine {
     // keep track of all used references:
     private final BitSet alignedReferenceIds;
 
-    private final OrganismsProfile organismsProfile;
 
     // used for stats:
     long countSequencesProcessed;
@@ -155,11 +153,6 @@ public class AlignmentEngine {
         for (int i = 0; i < readMatchesForRefIndex.length; i++)
             readMatchesForRefIndex[i] = new ReadMatch();
 
-        if (organismsOutStream != null) {
-            organismsProfile = new OrganismsProfile(MappingManager.getTaxonomyMapping());
-            organismsProfile.setTopPercent(maltOptions.getTopPercentLCA());
-        } else
-            organismsProfile = null;
 
         seedArrays = resizeAndConstructEntries(new SeedMatchArray[0], 1000, maltOptions.getMaxSeedsPerReference());
     }
@@ -493,10 +486,6 @@ public class AlignmentEngine {
                 }
             }
 
-            if (organismsOutStream != null) {
-                organismsProfile.addRead(Utilities.getFirstWordSkipLeadingGreaterSign(query.getHeader()), numberOfMatches, matchesArray);
-            }
-
             if (alignedReadsWriter != null) {
                 alignedReadsWriter.writeByRank(threadNumber, query.getId(), Utilities.getFirstWordEnsureLeadingGreaterSign(query.getHeader()), Utilities.copy0Terminated(query.getSequence()));
             }
@@ -518,9 +507,6 @@ public class AlignmentEngine {
             if (rmaWriter != null && maltOptions.isSaveUnalignedToRMA()) {
                 rmaWriter.processMatches(query.getHeaderString(), query.getSequenceString(), matchesArray, 0,aligner.ignoreDamage());
             }
-            if (organismsOutStream != null) {
-                organismsProfile.addNoHitsRead();
-            }
 
             if (alignedReadsWriter != null) {
                 alignedReadsWriter.skipByRank(threadNumber, query.getId());
@@ -531,22 +517,17 @@ public class AlignmentEngine {
         }
     }
 
+
     /**
      * finish up after outer loop completed
      */
     public void finish() {
-        if (organismsOutStream != null) {
-            organismsProfile.finishAnalysis();
-        }
     }
 
     /**
      * compute total sequences processed
-     *
-     * @param alignmentEngines
-     * @return total
      */
-    public static long getTotalSequencesProcessed(final AlignmentEngine[] alignmentEngines) {
+    static long getTotalSequencesProcessed(final AlignmentEngine[] alignmentEngines) {
         long total = 0;
         for (AlignmentEngine alignmentEngine : alignmentEngines) {
             total += alignmentEngine.countSequencesProcessed;
@@ -582,9 +563,6 @@ public class AlignmentEngine {
         return total;
     }
 
-    public OrganismsProfile getOrganismsProfile() {
-        return organismsProfile;
-    }
 
     public BitSet getAlignedReferenceIds() {
         return alignedReferenceIds;
@@ -661,5 +639,6 @@ public class AlignmentEngine {
         public void sort() {
             Arrays.sort(matches, 0, size, SeedMatch.getComparator());
         }
+        
     }
 }

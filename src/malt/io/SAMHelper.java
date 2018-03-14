@@ -1,6 +1,6 @@
 /**
  * SAMHelper.java 
- * Copyright (C) 2017 Daniel H. Huson
+ * Copyright (C) 2018 Daniel H. Huson
  *
  * (Some files contain contributions from other authors, who are then mentioned separately.)
  *
@@ -436,7 +436,7 @@ public class SAMHelper {
             case BlastX:
                 return String.format(FILE_HEADER_BLASTX_TEMPLATE, (commandLine != null ? commandLine:""));
             default:
-                return null;
+                return "???";
         }
     }
 }

@@ -1,6 +1,6 @@
 /**
  * GeneItem.java 
- * Copyright (C) 2017 Daniel H. Huson
+ * Copyright (C) 2018 Daniel H. Huson
  *
  * (Some files contain contributions from other authors, who are then mentioned separately.)
  *
@@ -22,46 +22,23 @@ package malt.genes;
 import jloda.util.Basic;
 import megan.io.OutputWriter;
 
-import java.io.DataInputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 
 /**
  * a gene item
- * Daniel Huson, 8.2014
+ * Daniel Huson, 11.2017
+ *
  */
 public class GeneItem {
-    private long giNumber;
-    private byte[] product;
-    private byte[] geneName;
     private byte[] proteinId;
-    private byte[] keggId;
-    private byte[] cogId;
+    private int keggId;
+    private int cogId;
+    private int seedId;
+    private int interproId;
+    private boolean reverse;
 
     public GeneItem() {
-    }
-
-    public long getGiNumber() {
-        return giNumber;
-    }
-
-    public void setGiNumber(long giNumber) {
-        this.giNumber = giNumber;
-    }
-
-    public byte[] getProduct() {
-        return product;
-    }
-
-    public void setProduct(byte[] product) {
-        this.product = product;
-    }
-
-    public byte[] getGeneName() {
-        return geneName;
-    }
-
-    public void setGeneName(byte[] geneName) {
-        this.geneName = geneName;
     }
 
     public byte[] getProteinId() {
@@ -72,29 +49,54 @@ public class GeneItem {
         this.proteinId = proteinId;
     }
 
-    public byte[] getKeggId() {
+    public int getKeggId() {
         return keggId;
     }
 
-    public void setKeggId(byte[] keggId) {
+    public void setKeggId(int keggId) {
         this.keggId = keggId;
     }
 
-    public byte[] getCogId() {
+    public int getCogId() {
         return cogId;
     }
 
-    public void setCogId(byte[] cogId) {
+    public void setCogId(int cogId) {
         this.cogId = cogId;
     }
 
+    public int getSeedId() {
+        return seedId;
+    }
+
+    public void setSeedId(int seedId) {
+        this.seedId = seedId;
+    }
+
+    public int getInterproId() {
+        return interproId;
+    }
+
+    public void setInterproId(int interproId) {
+        this.interproId = interproId;
+    }
+
+    public boolean isReverse() {
+        return reverse;
+    }
+
+    public void setReverse(boolean reverse) {
+        this.reverse = reverse;
+    }
+
     public String toString() {
-        return "gene=" + (geneName == null ? "null" : Basic.toString(geneName))
-                + " gi=" + giNumber
-                + ", product=" + (product == null ? "null" : Basic.toString(product))
-                + ", proteinId=" + (proteinId == null ? "null" : Basic.toString(proteinId))
-                + ", keggId=" + (keggId == null ? "null" : Basic.toString(keggId))
-                + ", cogId=" + (cogId == null ? "null" : Basic.toString(cogId));
+        return "proteinId=" + (proteinId == null ? "null" : Basic.toString(proteinId))
+                + ", keggId=" + keggId
+                + ", cogId=" + cogId
+                + ", seedId=" + seedId
+                + ", interProId=" + interproId
+                + ", reverse=" + reverse;
+
     }
 
     /**
@@ -104,37 +106,17 @@ public class GeneItem {
      * @throws java.io.IOException
      */
     public void write(OutputWriter outs) throws IOException {
-        outs.writeLong(giNumber);
-        if (product == null || product.length == 0)
-            outs.writeInt(0);
-        else {
-            outs.writeInt(product.length);
-            outs.write(product, 0, product.length);
-        }
-        if (geneName == null || geneName.length == 0)
-            outs.writeInt(0);
-        else {
-            outs.writeInt(geneName.length);
-            outs.write(geneName, 0, geneName.length);
-        }
         if (proteinId == null || proteinId.length == 0)
             outs.writeInt(0);
         else {
             outs.writeInt(proteinId.length);
-            outs.write(proteinId, 0, proteinId.length);
+            outs.write(proteinId);
         }
-        if (keggId == null || keggId.length == 0)
-            outs.writeInt(0);
-        else {
-            outs.writeInt(keggId.length);
-            outs.write(keggId, 0, keggId.length);
-        }
-        if (cogId == null || cogId.length == 0)
-            outs.writeInt(0);
-        else {
-            outs.writeInt(cogId.length);
-            outs.write(cogId, 0, cogId.length);
-        }
+        outs.writeInt(keggId);
+        outs.writeInt(cogId);
+        outs.writeInt(seedId);
+        outs.writeInt(interproId);
+        outs.write(reverse ? 1 : 0);
     }
 
     /**
@@ -143,25 +125,8 @@ public class GeneItem {
      * @param ins
      * @throws IOException
      */
-    public void read(DataInputStream ins) throws IOException {
-        giNumber = ins.readLong();
+    public void read(RandomAccessFile ins) throws IOException {
         int length = ins.readInt();
-        if (length == 0)
-            product = null;
-        else {
-            product = new byte[length];
-            if (ins.read(product, 0, length) != length)
-                throw new IOException("read failed");
-        }
-        length = ins.readInt();
-        if (length == 0)
-            geneName = null;
-        else {
-            geneName = new byte[length];
-            if (ins.read(geneName, 0, length) != length)
-                throw new IOException("read failed");
-        }
-        length = ins.readInt();
         if (length == 0)
             proteinId = null;
         else {
@@ -169,21 +134,10 @@ public class GeneItem {
             if (ins.read(proteinId, 0, length) != length)
                 throw new IOException("read failed");
         }
-        length = ins.readInt();
-        if (length == 0)
-            keggId = null;
-        else {
-            keggId = new byte[length];
-            if (ins.read(keggId, 0, length) != length)
-                throw new IOException("read failed");
-        }
-        length = ins.readInt();
-        if (length == 0)
-            cogId = null;
-        else {
-            cogId = new byte[length];
-            if (ins.read(cogId, 0, length) != length)
-                throw new IOException("read failed");
-        }
+        keggId = ins.readInt();
+        cogId = ins.readInt();
+        seedId = ins.readInt();
+        interproId = ins.readInt();
+        reverse = (ins.read() == 1);
     }
 }

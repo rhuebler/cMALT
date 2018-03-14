@@ -24,12 +24,12 @@ import malt.align.AlignerOptions;
 import malt.align.BlastStatisticsHelper;
 import malt.align.DNAScoringMatrix;
 import malt.align.ProteinScoringMatrix;
-import malt.analysis.OrganismsProfileMerger;
+
 import malt.data.*;
 import malt.genes.GeneTableAccess;
 import malt.io.*;
 import malt.mapping.MappingManager;
-import malt.util.ProfileUtilities;
+
 import malt.util.Utilities;
 import megan.classification.Classification;
 import megan.classification.ClassificationManager;
@@ -236,7 +236,9 @@ public class MaltRun {
         maltOptions.setUseWeightedLCA(options.getOption("-wlca", "weightedLCA", "Use the weighted LCA for taxonomic assignment", false));
         
         if (options.isDoHelp() || maltOptions.isUseWeightedLCA())
-            maltOptions.setWeightedLCAPercent(options.getOption("-wlp", "weightedLCAPercent", "Set the percent weight to cover", Document.DEFAULT_WEIGHTED_LCA_PERCENT));
+        	  maltOptions.setUseWeightedLCA(options.getOption("-wlca", "weightedLCA", "Use the weighted LCA for taxonomic assignment", false));
+        if (options.isDoHelp() || maltOptions.isUseWeightedLCA())
+            maltOptions.setLcaCoveragePercent(options.getOption("-lcp", "lcaCoveragePercent", "Set the percent for the LCA to cover", Document.DEFAULT_LCA_COVERAGE_PERCENT));
 
         ReadMagnitudeParser.setEnabled(options.getOption("mag", "magnitudes", "Reads have magnitudes (to be used in taxonomic or functional analysis)", false));
 
@@ -354,8 +356,10 @@ public class MaltRun {
         }
 
         final GeneTableAccess geneTableAccess;
-        if (outputOrganismFileNames.size() > 0 && (new File(indexDirectory, "gene-table.idx")).exists())
-            geneTableAccess = new GeneTableAccess(new File(indexDirectory, "gene-table.idx"));
+        if ((new File(indexDirectory, "annotation.idx")).exists()) {
+            geneTableAccess = new GeneTableAccess(new File(indexDirectory, "annotation.idx"), new File(indexDirectory, "annotation.db"));
+            maltOptions.setParseHeaders(true);
+        }
         else
             geneTableAccess = null;
 
@@ -489,7 +493,7 @@ public class MaltRun {
             System.err.println("Alignments written to file: " + matchesOutputFileUsed);
         }
         if (rmaWriter != null) {
-            rmaWriter.close();
+            rmaWriter.close(maltOptions.getContaminantsFile());
             System.err.println("Analysis written to file: " + rmaOutputFile);
         }
 
@@ -535,13 +539,7 @@ public class MaltRun {
                 System.err.println("Deleted temporary file: " + matchesOutputFileUsed);
         }
 
-        if (organismOutStream != null) {
-            OrganismsProfileMerger organismsProfileMerger = new OrganismsProfileMerger(MappingManager.getTaxonomyMapping(), geneTableAccess);
-            organismsProfileMerger.setName(Basic.getFileBaseName(Basic.getFileNameWithoutPath(infile)));
-            organismsProfileMerger.mergeAndCompute(ProfileUtilities.getOrganismsProfiles(alignmentEngines));
-            organismsProfileMerger.write(organismOutStream);
-            organismOutStream.close();
-        }
+       
         if (alignedReadsWriter != null) {
             // merge all thread-specific taxon profiles. This can be quite major computation...
             alignedReadsWriter.close();

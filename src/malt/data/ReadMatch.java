@@ -1,6 +1,6 @@
 /**
  * ReadMatch.java 
- * Copyright (C) 2015 Daniel H. Huson
+ * Copyright (C) 2018 Daniel H. Huson
  *
  * (Some files contain contributions from other authors, who are then mentioned separately.)
  *
@@ -38,10 +38,9 @@ class ReadMatch {
     private float bitScore;
     private float expected;
     private int percentIdentity;
-    private float ancientPercentIdentity;
     private int referenceId;
     private byte[] text;      // match text
-    private byte[] rma3Text;
+    private byte[] rma6Text;
 
     private int startRef; // start position of match in reference sequence
     private int endRef;  // end position of match in reference sequence
@@ -52,18 +51,16 @@ class ReadMatch {
     public ReadMatch() {
 
     }
-    public ReadMatch getAncCopy() {
-        return new ReadMatch(bitScore, expected, percentIdentity, referenceId, text, rma3Text, startRef, endRef,ancientPercentIdentity);
-    }
+
     /**
      * returns a copy
      *
      * @return copy
      */
     public ReadMatch getCopy() {
-        return new ReadMatch(bitScore, expected, percentIdentity, referenceId, text, rma3Text, startRef, endRef);
+        return new ReadMatch(bitScore, expected, percentIdentity, referenceId, text, rma6Text, startRef, endRef);
     }
-    
+
     /**
      * constructor
      *
@@ -71,33 +68,14 @@ class ReadMatch {
      * @param referenceId
      * @param text
      */
-    public ReadMatch(float bitScore, float expected, int percentIdentity, int referenceId, byte[] text, byte[] rma3Text, int startRef, int endRef, float ancientPerc) {
+    public ReadMatch(float bitScore, float expected, int percentIdentity, int referenceId, byte[] text, byte[] rma6Text, int startRef, int endRef) {
         this.bitScore = bitScore;
         this.expected = expected;
         this.percentIdentity = percentIdentity;
         this.referenceId = referenceId;
         this.entryNumber = ++numberOfEntries;
         this.text = text;
-        this.rma3Text = rma3Text;
-        this.startRef = startRef;
-        this.endRef = endRef;
-        this.ancientPercentIdentity = ancientPerc;
-    }
-    /**
-     * constructor
-     *
-     * @param bitScore
-     * @param referenceId
-     * @param text
-     */
-    public ReadMatch(float bitScore, float expected, int percentIdentity, int referenceId, byte[] text, byte[] rma3Text, int startRef, int endRef) {
-        this.bitScore = bitScore;
-        this.expected = expected;
-        this.percentIdentity = percentIdentity;
-        this.referenceId = referenceId;
-        this.entryNumber = ++numberOfEntries;
-        this.text = text;
-        this.rma3Text = rma3Text;
+        this.rma6Text = rma6Text;
         this.startRef = startRef;
         this.endRef = endRef;
     }
@@ -114,19 +92,11 @@ class ReadMatch {
         this.referenceId = referenceId;
         this.entryNumber = ++numberOfEntries;
         this.text = text;
-        this.rma3Text = rma3Text;
+        this.rma6Text = rma3Text;
         this.startRef = startRef;
         this.endRef = endRef;
     }
-    public void setAncientPercentIdentity(float identity){
-    	this.ancientPercentIdentity = identity;
-    }
-    public float getAncientPercentIdentity(){
-    	return ancientPercentIdentity;
-    }
-    public void setPercentIdentity(int percentIndentity){//TODO set this 
-    	this.percentIdentity = percentIndentity;
-    }
+
     public float getBitScore() {
         return bitScore;
     }
@@ -147,8 +117,8 @@ class ReadMatch {
         return text;
     }
 
-    public byte[] getRMA3Text() {
-        return rma3Text;
+    public byte[] getRMA6Text() {
+        return rma6Text;
     }
 
     public int getStartRef() {

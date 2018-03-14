@@ -1,8 +1,6 @@
-
-
 /**
  * RMA6Writer.java
- * Copyright (C) 2017 Daniel H. Huson
+ * Copyright (C) 2018 Daniel H. Huson
  * <p>
  * (Some files contain contributions from other authors, who are then mentioned separately.)
  * <p>
@@ -27,8 +25,10 @@ import jloda.util.ProgressPercentage;
 import malt.MaltOptions;
 import malt.Version;
 import malt.data.ReadMatch;
+import malt.mapping.Mapping;
 import malt.mapping.MappingManager;
 import megan.classification.Classification;
+import megan.core.ContaminantManager;
 import megan.core.Document;
 import megan.core.SyncArchiveAndDataTable;
 import megan.data.IReadBlock;
@@ -50,6 +50,8 @@ public class RMA6Writer {
     private final RMA6FileCreator rma6FileCreator;
     private final String rma6File;
 
+    private final boolean parseHeaders;
+
     private final String[] cNames;
 
     private final int maxMatchesPerQuery;
@@ -57,7 +59,7 @@ public class RMA6Writer {
 
     private final MatchLineRMA6[] matches;
 
-    final int[][] match2classification2id;
+    private final int[][] match2classification2id;
 
     private byte[] queryText = new byte[10000];
     private byte[] matchesText = new byte[10000];
@@ -73,6 +75,7 @@ public class RMA6Writer {
         System.err.println("Starting file: " + rma6File);
         this.maltOptions = maltOptions;
         this.rma6File = rma6File;
+        this.parseHeaders = maltOptions.isParseHeaders();
 
         maxMatchesPerQuery = maltOptions.getMaxAlignmentsPerQuery();
 
@@ -101,7 +104,7 @@ public class RMA6Writer {
      * @param numberOfMatches
      * @throws IOException
      */
-    public synchronized void processMatches(String queryHeader, String querySequence, ReadMatch[] matchesArray, int numberOfMatches, boolean ancientModeOn) throws IOException {
+    public synchronized void processMatches(String queryHeader, String querySequence, ReadMatch[] matchesArray, int numberOfMatches) throws IOException {
         // setup query text:
         byte[] queryName = Basic.swallowLeadingGreaterSign(Basic.getFirstWord(queryHeader)).getBytes();
         byte[] queryHeaderText = queryHeader.getBytes();
@@ -116,12 +119,17 @@ public class RMA6Writer {
         queryTextLength += querySequenceText.length;
         queryText[queryTextLength++] = '\n';
 
+        final String[] key = new String[cNames.length];
+        for (int i = 0; i < cNames.length; i++) {
+            key[i] = getKey(cNames[i]);
+        }
+
         // setup matches text:
         int matchesTextLength = 0;
         numberOfMatches = Math.min(maxMatchesPerQuery, numberOfMatches);
         for (int m = 0; m < numberOfMatches; m++) {
             final ReadMatch match = matchesArray[m];
-            final byte[] matchText = match.getRMA3Text();
+            final byte[] matchText = match.getRMA6Text();
 
             final int approximateLengthToAdd = matchesTextLength + matchText.length + queryName.length;
             if (approximateLengthToAdd + 100 > matchesText.length) {
@@ -139,15 +147,19 @@ public class RMA6Writer {
 
             matches[m].setBitScore(match.getBitScore());
             matches[m].setExpected(match.getExpected());
-            if(ancientModeOn){
-            	//System.out.println("Ancient: " + (int) matchesArray[m].getAncientPercentIdentity());
-//            	System.out.println("MOdernt: " + match.getPercentIdentity());
-            	matches[m].setPercentIdentity(match.getAncientPercentIdentity());
-            }else{
-            	matches[m].setPercentIdentity(match.getPercentIdentity());
-            }
+            matches[m].setPercentIdentity(match.getPercentIdentity());
+
+            final String refHeader = (parseHeaders ? getWordAsString(match.getRMA6Text(), 2) : null);
+
             for (int i = 0; i < cNames.length; i++) {
-                final int id = MappingManager.getMapping(i).get(match.getReferenceId());
+                int id = 0;
+                if (parseHeaders)
+                    id = parseIdInHeader(key[i], refHeader);
+                if (id == 0) {
+                    Mapping mapping = MappingManager.getMapping(i);
+                    if (mapping != null)
+                        id = MappingManager.getMapping(i).get(match.getReferenceId());
+                }
                 match2classification2id[m][i] = id;
                 matches[m].setFId(i, id);
             }
@@ -156,13 +168,22 @@ public class RMA6Writer {
         rma6FileCreator.addQuery(queryText, queryTextLength, numberOfMatches, matchesText, matchesTextLength, match2classification2id, 0);
     }
 
+    private int parseIdInHeader(String key, String word) {
+        int pos = word.indexOf(key);
+        if (pos != -1) {
+            if (Basic.isInteger(word.substring(pos + key.length())))
+                return Basic.parseInt(word.substring(pos + key.length()));
+        }
+        return 0;
+    }
+
     /**
      * finish generation of RMA6 file
      *
      * @throws IOException
      * @throws CanceledException
      */
-    public void close() throws IOException {
+    public void close(String contaminantsFile) throws IOException {
         try {
             System.err.println("Finishing file: " + rma6File);
 
@@ -200,7 +221,7 @@ public class RMA6Writer {
             final Document doc = new Document();
             doc.setTopPercent(maltOptions.getTopPercentLCA());
             doc.setLcaAlgorithm(maltOptions.isUseWeightedLCA() ? Document.LCAAlgorithm.weighted : Document.LCAAlgorithm.naive);
-            //TODO LCA parameter not used doc.setLcaCoveragePercent(maltOptions.getLcaCoveragePercent());
+            doc.setLcaCoveragePercent(maltOptions.getLcaCoveragePercent());
             doc.setMinSupportPercent(maltOptions.getMinSupportPercentLCA());
             doc.setMinSupport(maltOptions.getMinSupportLCA());
             doc.setMaxExpected((float) maltOptions.getMaxExpected());
@@ -209,8 +230,15 @@ public class RMA6Writer {
             doc.setMaxExpected((float) maltOptions.getMaxExpected());
             doc.setMinPercentIdentity(maltOptions.getMinPercentIdentityLCA());
             doc.setUseIdentityFilter(maltOptions.isUsePercentIdentityFilterLCA());
+            doc.getActiveViewers().addAll(Arrays.asList(MappingManager.getCNames()));
 
             doc.setReadAssignmentMode(Document.ReadAssignmentMode.readCount); // todo: make this an option
+
+            if (Basic.fileExistsAndIsNonEmpty(contaminantsFile)) {
+                ContaminantManager contaminantManager = new ContaminantManager();
+                contaminantManager.read(contaminantsFile);
+                doc.getDataTable().setContaminants(contaminantManager.getTaxonIdsString());
+            }
 
             doc.getMeganFile().setFileFromExistingFile(rma6File, false);
             doc.loadMeganFile();
@@ -224,6 +252,47 @@ public class RMA6Writer {
             throw new IOException(ex); // this can't happen because ProgressPercent never throws CanceledException
         }
     }
-}
 
-  
+    /**
+     * get key
+     *
+     * @param fName
+     * @return key
+     */
+    private static String getKey(String fName) {
+        switch (fName.toLowerCase()) {
+            case "interpro2go":
+                return "ipr|";
+            case "eggnog":
+                return "cog|";
+            default:
+                return fName.toLowerCase() + "|";
+        }
+    }
+
+    /**
+     * get a word as string
+     *
+     * @param text
+     * @param whichWord
+     * @return string or null
+     */
+    private static String getWordAsString(byte[] text, int whichWord) {
+        int start = -1;
+        whichWord--;
+        for (int i = 0; i < text.length; i++) {
+            if (Character.isWhitespace(text[i])) {
+                if (whichWord > 0) {
+                    whichWord--;
+                    if (whichWord == 0)
+                        start = i;
+                } else if (whichWord == 0) {
+                    return new String(text, start, i - start);
+                }
+            }
+        }
+        if (start >= 0)
+            return new String(text, start, text.length - start);
+        return null;
+    }
+}

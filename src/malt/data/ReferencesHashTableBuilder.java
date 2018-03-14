@@ -1,6 +1,6 @@
 /**
  * ReferencesHashTableBuilder.java 
- * Copyright (C) 2017 Daniel H. Huson
+ * Copyright (C) 2018 Daniel H. Huson
  *
  * (Some files contain contributions from other authors, who are then mentioned separately.)
  *
@@ -87,7 +87,7 @@ public class ReferencesHashTableBuilder {
         // number of possible different seed values:
         final long numberOfPossibleHashValues = (long) Math.ceil(Math.pow(alphabet.size(), seedShape.getWeight()));
 
-        System.err.println("Number of seeds in references:  " + totalNumberOfSeeds);
+        System.err.println(String.format("Seeds found: %,14d", totalNumberOfSeeds));
         // System.err.println("Number of possible hash values: " + numberOfPossibleHashValues);
 
         long entriesPerTable = (long) (hashTableLoadFactor * Math.min(totalNumberOfSeeds, numberOfPossibleHashValues)); // assume only 90% are used
@@ -104,8 +104,8 @@ public class ReferencesHashTableBuilder {
             hashMask = tableSize - 1;
         }
 
-        System.err.println("TableSize= " + tableSize);
-        System.err.println("hashMask.length= " + Integer.toBinaryString(hashMask).length());
+        System.err.println(String.format("tableSize=   %,14d", tableSize));
+        System.err.println(String.format("hashMask.length=%d", Integer.toBinaryString(hashMask).length()));
 
         maxHitsPerHash = maxHitPerSeed; // we use the same value because the actual number of seeds used is usually smaller than the table size
         // final double averageWordsPerHashValue = Math.max(1,  (totalNumberOfSeeds / (double) tableSize));
@@ -213,7 +213,7 @@ public class ReferencesHashTableBuilder {
             progressPercentage.setProgress(Basic.getSum(countsForProgress));
         }
         progressPercentage.close();
-        System.err.println("Number of low-complexity seeds skipped: " + Basic.getSum(countLowComplexitySeeds));
+        System.err.println(String.format("Number of low-complexity seeds skipped: %,d", Basic.getSum(countLowComplexitySeeds)));
         executor.shutdown();
     }
 
@@ -286,9 +286,9 @@ public class ReferencesHashTableBuilder {
             progressPercentage.setProgress(Basic.getSum(countsForProgress));
         }
         progressPercentage.reportTaskCompleted();
-        System.err.println(String.format("Total keys used:    %12d", Basic.getSum(totalKeys)));
-        System.err.println(String.format("Total seeds matched:%12d", Basic.getSum(totalSeeds)));
-        System.err.println(String.format("Total seeds dropped:%12d", Basic.getSum(totalDropped)));
+        System.err.println(String.format("Total keys used:    %,14d", Basic.getSum(totalKeys)));
+        System.err.println(String.format("Total seeds matched:%,14d", Basic.getSum(totalSeeds)));
+        System.err.println(String.format("Total seeds dropped:%,14d", Basic.getSum(totalDropped)));
         // shut down threads:
         executor.shutdownNow();
         return nextFreeIndex.get();
@@ -461,12 +461,12 @@ public class ReferencesHashTableBuilder {
         final ProgressPercentage progressPercentage = new ProgressPercentage("Writing file: " + file);
 
         try (OutputWriter outs = new OutputWriter(file)) {
-            outs.write(MAGIC_NUMBER, 0, MAGIC_NUMBER.length);
+            outs.write(MAGIC_NUMBER);
             outs.writeInt(SequenceType.rankOf(referenceSequenceType));
             if (referenceSequenceType == SequenceType.Protein) {
                 final byte[] bytes = alphabet.toString().getBytes();
                 outs.writeInt(bytes.length);
-                outs.write(bytes, 0, bytes.length);
+                outs.write(bytes);
             }
             outs.writeInt(tableSize);
             outs.writeInt(hashMask);
@@ -476,7 +476,7 @@ public class ReferencesHashTableBuilder {
 
             final byte[] shapeBytes = seedShape.getBytes();
             outs.writeInt(shapeBytes.length);
-            outs.write(shapeBytes, 0, shapeBytes.length);
+            outs.write(shapeBytes);
         } finally {
             progressPercentage.reportTaskCompleted();
 
