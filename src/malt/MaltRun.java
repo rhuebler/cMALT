@@ -31,7 +31,6 @@ import malt.io.*;
 import malt.mapping.MappingManager;
 
 import malt.util.Utilities;
-import megan.classification.Classification;
 import megan.classification.ClassificationManager;
 import megan.core.Document;
 import megan.parsers.blast.BlastMode;
@@ -59,6 +58,7 @@ public class MaltRun {
     private long totalReads = 0;
     private long totalAlignedReads = 0;
     private long totalAlignments = 0;
+    private long totalRemoved = 0;
 
     /**
      * run the MALT program
@@ -147,12 +147,7 @@ public class MaltRun {
         final List<String> outputOrganismFileNames;
         if (true) // do not allow organisms output
             outputOrganismFileNames = new LinkedList<>();
-        else {
-            outputOrganismFileNames = options.getOption("oo", "outOrganism", "Organism profile XML output file(s) or directory or STDOUT", new LinkedList<String>());
-            if (outputOrganismFileNames.size() > 0 || options.isDoHelp()) {
-                maltOptions.setGzipOrganisms(options.getOption("zo", "gzipOrganism", "Compress organism output using gzip", maltOptions.isGzipOrganisms()));
-            }
-        }
+
         final List<String> outputAlignedFileNames = options.getOption("oa", "outAligned", "Aligned reads output file(s) or directory or STDOUT", new LinkedList<String>());
         if (outputAlignedFileNames.size() > 0 || options.isDoHelp()) {
             maltOptions.setGzipAlignedReads(options.getOption("zal", "gzipAligned", "Compress aligned reads output using gzip", maltOptions.isGzipAlignedReads()));
@@ -210,12 +205,6 @@ public class MaltRun {
         options.comment("LCA parameters :");
         final String[] cNames = (options.isDoHelp() ? ClassificationManager.getAllSupportedClassifications().toArray(new String[ClassificationManager.getAllSupportedClassifications().size()]) : MappingManager.determineAvailableMappings(indexDirectory));
 
-        if (false) {
-            for (String cName : cNames) {
-                final boolean useLCA = options.getOption("-l_" + cName.toLowerCase(), "lca_" + cName.toLowerCase(), "Use LCA for assigning to '" + cName + "' (otherwise 'best-hit')", ProgramProperties.get(cName + "UseLCA", cName.equals(Classification.Taxonomy)));
-                ProgramProperties.put(cName + "UseLCA", useLCA);
-            }
-        }
 
         maltOptions.setTopPercentLCA(options.getOption("top", "topPercent", "Top percent value for LCA algorithm", maltOptions.getTopPercentLCA()));
         maltOptions.setMinSupportPercentLCA(options.getOption("supp", "minSupportPercent", "Min support value for LCA algorithm as a percent of assigned reads (0==off)", maltOptions.getMinSupportPercentLCA()));
@@ -462,9 +451,9 @@ public class MaltRun {
             final int threadNumber = thread;
             executor.execute(new Runnable() {
                 public void run() {
-                    try {
+                	try {
                         alignmentEngines[threadNumber] = new AlignmentEngine(threadNumber, maltOptions, alignerOptions, referencesDB, tables, fastAReader,
-                                matchesWriter, rmaWriter, organismOutStream, alignedReadsWriter, unalignedReadsWriter);
+                                matchesWriter, rmaWriter, alignedReadsWriter, unalignedReadsWriter, geneTableAccess);
                         alignmentEngines[threadNumber].runOuterLoop();
                         alignmentEngines[threadNumber].finish();
                     } catch (Exception ex) {
@@ -557,10 +546,12 @@ public class MaltRun {
         totalAlignedReads += countAlignedReads;
         final long countAlignments = AlignmentEngine.getTotalAlignments(alignmentEngines);
         totalAlignments += countAlignments;
-
+        final long countRemoved = AlignmentEngine.getTotalRemovedSequences(alignmentEngines);
+        totalRemoved +=  countRemoved;
         System.err.println(String.format("Num. of queries: %10d", countReads));
         System.err.println(String.format("Aligned queries: %10d", countAlignedReads));
         System.err.println(String.format("Num. alignments: %10d", countAlignments));
+        System.err.println(String.format("Num. removed: %10d", totalRemoved));
     }
 
     /**

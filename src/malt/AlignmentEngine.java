@@ -23,8 +23,8 @@ import jloda.util.Basic;
 import malt.align.AlignerOptions;
 import malt.align.BandedAligner;
 import malt.data.*;
+import malt.genes.GeneTableAccess;
 import malt.io.*;
-import malt.mapping.MappingManager;
 import malt.util.FixedSizePriorityQueue;
 import malt.util.Utilities;
 import megan.parsers.blast.BlastMode;
@@ -55,20 +55,19 @@ public class AlignmentEngine {
     // io:
     private final FastAReader fastAReader;
     private final MaltOptions.MatchOutputFormat matchOutputFormat;
-    private final OutputStream organismsOutStream;
     private final FileWriterRanked matchesWriter;
     private final FileWriterRanked alignedReadsWriter;
     private final FileWriterRanked unalignedReadsWriter;
     private final RMA6Writer rmaWriter;
+    private final GeneTableAccess geneTableAccess;
+    
     // parameters
     private final double minRawScore;
     private final double minBitScore;
     private final double maxExpected;
     private final double percentIdentity;
 
-    // xdrop heuristic:
-    private final int xDrop;
-    private final int minUngappedRawScore;
+
 
     // keep track of all used references:
     private final BitSet alignedReferenceIds;
@@ -80,7 +79,8 @@ public class AlignmentEngine {
     long countSeedMatches;
     long countHashSeedMismatches;
     long countAlignments;
-
+    long countRemovedReads;
+    
     // used in inner loop:
     private final FixedSizePriorityQueue<ReadMatch> matchesQueue;
     private final ReadMatch[] recycledMatchesArray;
@@ -93,6 +93,10 @@ public class AlignmentEngine {
     private int seedArraysLength = 0;
 
     static private QuerySequence2MatchesCache querySequence2MatchesCache = null;
+
+    // xdrop heuristic:
+    private final int xDrop;
+    private final int minUngappedRawScore;
 
     /**
      * construct an instance of the alignment engine. Each instance is run in a separate thread
@@ -107,25 +111,25 @@ public class AlignmentEngine {
      * @param unalignedReadsWriter
      * @throws IOException
      */
-    public AlignmentEngine(final int threadNumber, final MaltOptions maltOptions, AlignerOptions alignerOptions, final ReferencesDBAccess referencesDB,
-                           final ReferencesHashTableAccess[] tables, final FastAReader fastAReader,
-                           final FileWriterRanked matchesWriter, final RMA6Writer rmaWriter, final OutputStream organismsOutStream,
-                           final FileWriterRanked alignedReadsWriter, final FileWriterRanked unalignedReadsWriter) throws IOException {
-        this.threadNumber = threadNumber;
-        this.maltOptions = maltOptions;
-        this.referencesDB = referencesDB;
-        this.tables = tables;
-        this.fastAReader = fastAReader;
-        this.matchOutputFormat = maltOptions.getMatchOutputFormat();
-        this.matchesWriter = matchesWriter;
-        this.rmaWriter = rmaWriter;
-        this.organismsOutStream = organismsOutStream;
-        this.alignedReadsWriter = alignedReadsWriter;
-        this.unalignedReadsWriter = unalignedReadsWriter;
+    AlignmentEngine(final int threadNumber, final MaltOptions maltOptions, AlignerOptions alignerOptions, final ReferencesDBAccess referencesDB,
+            final ReferencesHashTableAccess[] tables, final FastAReader fastAReader,
+            final FileWriterRanked matchesWriter, final RMA6Writer rmaWriter,
+            final FileWriterRanked alignedReadsWriter, final FileWriterRanked unalignedReadsWriter, final GeneTableAccess geneTableAccess) throws IOException {
+    			this.threadNumber = threadNumber;
+    			this.maltOptions = maltOptions;
+    			this.referencesDB = referencesDB;
+    			this.tables = tables;
+    			this.fastAReader = fastAReader;
+    			this.matchOutputFormat = maltOptions.getMatchOutputFormat();
+    			this.matchesWriter = matchesWriter;
+    			this.rmaWriter = rmaWriter;
+    			this.alignedReadsWriter = alignedReadsWriter;
+    			this.unalignedReadsWriter = unalignedReadsWriter;
+    			this.geneTableAccess = geneTableAccess;
 
-        this.shift = maltOptions.getShift();
+this.shift = maltOptions.getShift();
 
-        this.alignedReferenceIds = (maltOptions.isSparseSAM() ? null : new BitSet());
+this.alignedReferenceIds = (maltOptions.isSparseSAM() ? null : new BitSet());
 
         seedShapes = new SeedShape[tables.length];
         for (int t = 0; t < tables.length; t++) {
@@ -143,7 +147,6 @@ public class AlignmentEngine {
         // ungapped alignment parameters:
         xDrop = alignerOptions.getUngappedXDrop(maltOptions.getMode());
         minUngappedRawScore = alignerOptions.getUngappedMinRawScore(maltOptions.getMode());
-
 
         // data structures used in inner loop:
         matchesQueue = new FixedSizePriorityQueue<>(maltOptions.getMaxAlignmentsPerQuery(), ReadMatch.createComparator());
@@ -184,6 +187,8 @@ public class AlignmentEngine {
             		 if (querySequence2MatchesCache != null && querySequence2MatchesCache.contains(query.getSequence(), query.getSequenceLength())) {
             			 if(!maltOptions.getRemoveDuplicates())
             				 runInnerLoop(query, 0, null); // query is cached, no need to compute frames etc
+            			 else
+            				 countRemovedReads++;
             			 } else {
             			// determine all frames to use:
             				 dataForInnerLoop.computeFrames(query.getSequence(), query.getQualityValues(), query.getSequenceLength());
@@ -208,6 +213,9 @@ public class AlignmentEngine {
             			runInnerLoop(query, totalSize, dataForInnerLoop);
             		}
             	}//if comlexity 
+            	 else {
+            		 countRemovedReads++;
+            	 }
             }
         } catch (Exception ex) {
             Basic.caught(ex);
@@ -548,7 +556,19 @@ public class AlignmentEngine {
         }
         return total;
     }
-
+    /**
+     * compute total number of removed reads
+     *
+     * @param alignmentEngines
+     * @return total
+     */
+    public static long getTotalRemovedSequences(final AlignmentEngine[] alignmentEngines) {
+        long total = 0;
+        for (AlignmentEngine alignmentEngine : alignmentEngines) {
+            total += alignmentEngine.countRemovedReads;
+        }
+        return total;
+    }
     /**
      * compute total number of alignments
      *
