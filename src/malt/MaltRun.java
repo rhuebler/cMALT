@@ -431,7 +431,6 @@ public class MaltRun {
         final FileWriterRanked alignedReadsWriter = (alignedReadsOutputFile != null ? new FileWriterRanked(alignedReadsOutputFile, maltOptions.getNumberOfThreads(), 1) : null);
         final FileWriterRanked unalignedReadsWriter = (unalignedReadsOutputFile != null ? new FileWriterRanked(unalignedReadsOutputFile, maltOptions.getNumberOfThreads(), 1) : null);
 
-        final OutputStream organismOutStream = (organismProfileOutputFile != null ? new BufferedOutputStream(new FileOutputStream(organismProfileOutputFile)) : null);
 
         if (matchesWriter == null && rmaWriter == null && alignedReadsWriter == null && unalignedReadsWriter == null)
             System.err.println("Warning: no output specified");
