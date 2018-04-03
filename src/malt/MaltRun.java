@@ -392,7 +392,7 @@ public class MaltRun {
             System.err.println(String.format("Total num. of queries: %10d", totalReads));
             System.err.println(String.format("Total aligned queries: %10d", totalAlignedReads));
             System.err.println(String.format("Total num. alignments: %10d", totalAlignments));
-
+            System.err.println(String.format("Total Num. removed alignments: %10d", totalRemoved));
         }
     }
 
@@ -550,7 +550,7 @@ public class MaltRun {
         System.err.println(String.format("Num. of queries: %10d", countReads));
         System.err.println(String.format("Aligned queries: %10d", countAlignedReads));
         System.err.println(String.format("Num. alignments: %10d", countAlignments));
-        System.err.println(String.format("Num. removed: %10d", totalRemoved));
+        System.err.println(String.format("Num. removed alignments: %10d", countRemoved));
     }
 
     /**
