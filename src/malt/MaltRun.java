@@ -163,6 +163,8 @@ public class MaltRun {
   		
   		maltOptions.setUserCustomDNAScoring(options.getOption("u", "customScoring", "Provide location to custom DNA scoring Matrix", ""));
   		maltOptions.setRemoveDuplicates(options.getOption("r", "removeDup", "Remove Duplicates if cashing", false));
+  		if(maltOptions.getRemoveDuplicates()||!maltOptions.isUseReplicateQueryCaching())
+  			maltOptions.setUseReplicateQueryCaching(true);
   		maltOptions.setMinimumQueryComplexity(options.getOption("c", "minComp", "Set Minimum Query Complexity", 0.0));
   		maltOptions.setAncientScoringMatrix(options.getOption("asm", "ancientScoringMatrix", "Use DNAScoring Matrix desinged for aDNA", false));
   		alignerOptions.setPercent(options.getOption("cmp", "customMatrixPercent", "By how much should transitionpenality be reduced", 0.01));
