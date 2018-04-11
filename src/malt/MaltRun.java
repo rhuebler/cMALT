@@ -160,7 +160,7 @@ public class MaltRun {
         options.comment("Custom Parameters:"); 
   		
   		//TODO Set MALT Custom parameters here
-  		
+  		maltOptions.setDisbaleLCA(options.getOption("dlca", "disableLCA", "turn off LCA algorithm", false));
   		maltOptions.setUserCustomDNAScoring(options.getOption("u", "customScoring", "Provide location to custom DNA scoring Matrix", ""));
   		maltOptions.setRemoveDuplicates(options.getOption("r", "removeDup", "Remove Duplicates if cashing", false));
   		if(maltOptions.getRemoveDuplicates()||!maltOptions.isUseReplicateQueryCaching())

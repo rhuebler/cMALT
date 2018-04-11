@@ -98,6 +98,8 @@ public class AlignmentEngine {
     private final int xDrop;
     private final int minUngappedRawScore;
 
+    //TODO add ignore LCA
+    private boolean ignoreLCA = false;
     /**
      * construct an instance of the alignment engine. Each instance is run in a separate thread
      *
@@ -158,6 +160,7 @@ this.alignedReferenceIds = (maltOptions.isSparseSAM() ? null : new BitSet());
 
 
         seedArrays = resizeAndConstructEntries(new SeedMatchArray[0], 1000, maltOptions.getMaxSeedsPerReference());
+        ignoreLCA = maltOptions.getDisbaleLCA();
     }
     public double getComplexity(String sequence){
 		return DNAComplexityMeasure.getMinimumDNAComplexityWoottenFederhen(sequence);
@@ -484,7 +487,15 @@ this.alignedReferenceIds = (maltOptions.isSparseSAM() ? null : new BitSet());
                 }
             }
             if (rmaWriter != null) {
-                rmaWriter.processMatches(query.getHeaderString(), query.getSequenceString(), matchesArray, numberOfMatches, aligner.ignoreDamage());
+            	if(ignoreLCA) {
+            		for(int i= 0;i<= numberOfMatches; i++) {
+            			ReadMatch[] match= new ReadMatch[1];
+            			match[0] = matchesArray[i];
+            			rmaWriter.processMatches(query.getHeaderString(), query.getSequenceString(), match, 1, aligner.ignoreDamage());
+            		}
+            	}else {
+            		rmaWriter.processMatches(query.getHeaderString(), query.getSequenceString(), matchesArray, numberOfMatches, aligner.ignoreDamage());
+            	}
             }
 
             if (alignedReferenceIds != null) {

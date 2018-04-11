@@ -103,12 +103,9 @@ public class MaltOptions {
     private String contaminantsFile = "";
 
     private boolean parseHeaders;
-    /**
-     * getAncientScoringMAtrix()
-     * 
-     * 
-     * @return boolean
-     */
+    
+    private boolean disableLCA = false;
+    
     public float getLcaCoveragePercent() {
         return lcaCoveragePercent;
     }
@@ -116,6 +113,18 @@ public class MaltOptions {
     public void setLcaCoveragePercent(float lcaCoveragePercent) {
         this.lcaCoveragePercent = lcaCoveragePercent;
     }
+    public void setDisbaleLCA(boolean b) {
+    	this.disableLCA = b;
+    }
+    public boolean getDisbaleLCA() {
+    	return disableLCA;
+    }
+	/**
+	 * getAncientScoringMAtrix(boolean b)
+	 * 
+	 * 
+	 * @return void
+	 */
     public boolean getAncientScoringMatrix(){
     	return this.ancientScoringMatrix; 
     }
@@ -478,4 +487,5 @@ public class MaltOptions {
     public void setParseHeaders(boolean parseHeaders) {
         this.parseHeaders = parseHeaders;
     }
+    
 }
