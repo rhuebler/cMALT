@@ -488,9 +488,15 @@ this.alignedReferenceIds = (maltOptions.isSparseSAM() ? null : new BitSet());
             }
             if (rmaWriter != null) {
             	if(ignoreLCA) {
+            		float topScore = 0;;
             		for(int i= 0;i< numberOfMatches; i++) {
             			ReadMatch[] match= new ReadMatch[1];
             			match[0] = matchesArray[i];
+            			if(i==0) {
+            				topScore=match[0].getBitScore();
+            			}
+            			if(match[i].getBitScore()/topScore < 1-0.01)
+            				break;
             			rmaWriter.processMatches(query.getHeaderString(), query.getSequenceString(), match, 1, aligner.ignoreDamage());
             		}
             	}else {
