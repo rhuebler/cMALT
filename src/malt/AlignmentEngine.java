@@ -495,8 +495,9 @@ this.alignedReferenceIds = (maltOptions.isSparseSAM() ? null : new BitSet());
             			if(i==0) {
             				topScore=match[0].getBitScore();
             			}
-            			if(match[i].getBitScore()/topScore < 1-0.01)
+            			if(match[0].getBitScore()/topScore < 1-0.01) {
             				break;
+            			}	
             			rmaWriter.processMatches(query.getHeaderString(), query.getSequenceString(), match, 1, aligner.ignoreDamage());
             		}
             	}else {
