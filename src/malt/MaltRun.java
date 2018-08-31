@@ -167,7 +167,7 @@ public class MaltRun {
   			maltOptions.setUseReplicateQueryCaching(true);
   		maltOptions.setMinimumQueryComplexity(options.getOption("c", "minComp", "Set Minimum Query Complexity", 0.0));
   		maltOptions.setAncientScoringMatrix(options.getOption("asm", "ancientScoringMatrix", "Use DNAScoring Matrix desinged for aDNA", false));
-  		alignerOptions.setPercent(options.getOption("cmp", "customMatrixPercent", "By how much should transitionpenality be reduced", 0.01));
+  		alignerOptions.setPercent(options.getOption("cmp", "customMatrixPercent", "By how much should transition penality be reduced", 0.01));
   		alignerOptions.setTails( options.getOption("tails", "tails", "How many bases should be treated more lenient when damaged", 5));
        
   		
