@@ -224,7 +224,7 @@ public class MaltRun {
 
         maltOptions.setUsePercentIdentityFilterLCA(options.getOption("mif", "useMinPercentIdentityFilterLCA", "Use percent identity assignment filter", maltOptions.isUsePercentIdentityFilterLCA()));
 
-        maltOptions.setUseWeightedLCA(options.getOption("-wlca", "weightedLCA", "Use the weighted LCA for taxonomic assignment", false));
+        //maltOptions.setUseWeightedLCA(options.getOption("-wlca", "weightedLCA", "Use the weighted LCA for taxonomic assignment", false));
         
         if (options.isDoHelp() || maltOptions.isUseWeightedLCA())
         	  maltOptions.setUseWeightedLCA(options.getOption("-wlca", "weightedLCA", "Use the weighted LCA for taxonomic assignment", false));
