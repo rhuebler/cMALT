@@ -55,6 +55,13 @@ public class AlignerOptions {
 
     private boolean samSoftClipping = false;
     private boolean useBorderMatrix= false;
+    private boolean singleStranded = false;
+    public void setSingleStranded(boolean singleStranded) {
+    	this.singleStranded = singleStranded;
+    }
+    public boolean getSingleStranded() {
+    	return this.singleStranded;
+    }
     public void setTails(int t){
     	this.tails = t;
     }

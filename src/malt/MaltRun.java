@@ -169,7 +169,7 @@ public class MaltRun {
   		maltOptions.setAncientScoringMatrix(options.getOption("asm", "ancientScoringMatrix", "Use DNAScoring Matrix desinged for aDNA", false));
   		alignerOptions.setPercent(options.getOption("cmp", "customMatrixPercent", "By how much should transition penality be reduced", 0.01));
   		alignerOptions.setTails( options.getOption("tails", "tails", "How many bases should be treated more lenient when damaged", 5));
-       
+        alignerOptions.setSingleStranded(options.getOption("singleStranded", "singleStranded", "Set tolarable damage to single stranded pattern", false));
   		
   		options.comment("Performance:");
         maltOptions.setNumberOfThreads(options.getOption("t", "numThreads", "Number of worker threads", Runtime.getRuntime().availableProcessors()));

@@ -109,7 +109,7 @@ public class MaltOptions {
     public float getLcaCoveragePercent() {
         return lcaCoveragePercent;
     }
-
+   
     public void setLcaCoveragePercent(float lcaCoveragePercent) {
         this.lcaCoveragePercent = lcaCoveragePercent;
     }
