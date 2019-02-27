@@ -1,6 +1,6 @@
 # Hacked Version of Daniel Husons MALT - MEGAN alignment tool
 
-This only exists as we sometimes needed extra functionalities that were not available in MALT by default. For most users it is hihgly advisable to go with Daniels original version of MALT which you can find here https://github.com/danielhuson/malt.
+This only exists as we sometimes needed extra functionalities that were not available in MALT by default. For most users it is hihgly advisable to go with Daniels original that is version of MALT which you can find here https://github.com/danielhuson/malt. No really you should as often as possible use Daniels version as your default version.
 
 But in case you need some of the hacked funtions find a list here.
 -dlca --disableLCA Turn off LCA algorithm and force read assignment to leaves. Will increase file size and read count and run time
